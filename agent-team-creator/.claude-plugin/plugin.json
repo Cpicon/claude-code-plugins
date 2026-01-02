@@ -5,9 +5,9 @@
   "author": {
     "name": "Christian Picon Calderon",
     "email": "c.picon@uniandes.edu.co",
-    "url": "https://github.com/Christian-Picon-Az"
+    "url": "https://github.com/Cpicon"
   },
   "license": "MIT",
-  "repository": "https://github.com/Christian-Picon-Az/claude-code-plugins",
+  "repository": "https://github.com/Cpicon/claude-code-plugins",
   "keywords": ["agents", "codebase-analysis", "automation", "team-generation", "debugging"]
 }

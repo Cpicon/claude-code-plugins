@@ -25,7 +25,7 @@ Automatically analyze your codebase and generate a team of specialized Claude Co
 ### 1. Add this marketplace
 
 ```bash
-/plugin marketplace add Christian-Picon-Az/claude-code-plugins
+/plugin marketplace add Cpicon/claude-code-plugins
 ```
 
 ### 2. Install a plugin
@@ -69,5 +69,5 @@ MIT License - see [LICENSE](./LICENSE) for details.
 ## Author
 
 **Christian Picon Calderon**
-- GitHub: [@Christian-Picon-Az](https://github.com/Christian-Picon-Az)
+- GitHub: [@Cpicon](https://github.com/Cpicon)
 - Email: c.picon@uniandes.edu.co
