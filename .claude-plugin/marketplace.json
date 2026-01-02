@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "cpicon-claude-plugins",
+  "description": "Claude Code plugins by Christian Picon Calderon",
+  "owner": {
+    "name": "Christian Picon Calderon",
+    "email": "c.picon@uniandes.edu.co",
+    "url": "https://github.com/Christian-Picon-Az"
+  },
+  "plugins": [
+    {
+      "name": "agent-team-creator",
+      "description": "Analyze codebase architecture and tech stack to automatically generate specialized Claude Code agent teams",
+      "version": "1.0.0",
+      "author": {
+        "name": "Christian Picon Calderon",
+        "email": "c.picon@uniandes.edu.co"
+      },
+      "source": "./agent-team-creator",
+      "category": "development"
+    }
+  ]
+}

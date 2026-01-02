@@ -1,0 +1,13 @@
+{
+  "name": "agent-team-creator",
+  "version": "1.0.0",
+  "description": "Analyze codebase architecture and tech stack to automatically generate specialized Claude Code agent teams",
+  "author": {
+    "name": "Christian Picon Calderon",
+    "email": "c.picon@uniandes.edu.co",
+    "url": "https://github.com/Christian-Picon-Az"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Christian-Picon-Az/claude-code-plugins",
+  "keywords": ["agents", "codebase-analysis", "automation", "team-generation", "debugging"]
+}
