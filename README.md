@@ -15,8 +15,29 @@ Automatically analyze your codebase and generate a team of specialized Claude Co
 - Agents saved directly to `.claude/agents/` for immediate use
 
 **Commands:**
-- `/generate-agent-team` - Analyze project and create specialized agents
-- `/generate-debugger` - Create project-specific debugger with orchestration patterns
+
+#### `/generate-agent-team`
+Analyze your project and create specialized agents based on:
+- Tech stack (frameworks, libraries, languages)
+- Architecture patterns (monolith, microservices, etc.)
+- Domain knowledge (business logic, data models)
+
+#### `/generate-debugger`
+Generate a project-specific debugger agent that:
+- Discovers all existing project agents in `.claude/agents/`
+- Creates orchestration patterns tailored to YOUR project architecture
+- Coordinates investigation by delegating to specialist agents
+- Produces structured reports with:
+  - Root cause analysis
+  - Investigation trail (which agents were consulted)
+  - Side effects and warnings
+  - Solutions ordered by effort (quick/proper/comprehensive)
+
+**Core Debugger Rules:**
+- Coordinates, doesn't implement - delegates to specialists
+- Evidence-based - requires file:line references
+- Synthesizes findings across agents
+- Considers system-wide impact
 
 [View plugin details](./agent-team-creator/README.md)
 

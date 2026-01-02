@@ -19,13 +19,10 @@ Or add to your Claude Code settings.
 
 ## Usage
 
+### Generate Agent Team
+
 Navigate to any project directory and run:
 
-```
-/agent-team-creator:generate-agent-team
-```
-
-Or if namespace is unavailable:
 ```
 /generate-agent-team
 ```
@@ -39,6 +36,33 @@ The plugin will:
    - Domain understanding (business logic, data models, APIs)
 4. Save agents to your project's `.claude/agents/` directory
 
+### Generate Project Debugger
+
+After generating your agent team, create a project-specific debugger:
+
+```
+/generate-debugger
+```
+
+The debugger will:
+1. Discover all existing project agents in `.claude/agents/`
+2. Analyze project architecture and tech stack
+3. Generate orchestration patterns tailored to YOUR project
+4. Create a `project-debugger.md` that knows how to consult your specialists
+
+**The generated debugger follows these core rules:**
+- **Coordinates, doesn't implement** - Delegates investigation to specialists
+- **Evidence-based only** - Requires file paths, line numbers, and code references
+- **Synthesizes findings** - Connects insights across agents, identifies patterns
+- **Considers system-wide impact** - Analyzes how issues ripple through the stack
+
+**Debugging Report Output:**
+- Issue summary and affected components
+- Investigation trail (which agents were consulted)
+- Root cause analysis with evidence chain
+- Impact assessment and side effects
+- Solutions ordered by effort (quick/proper/comprehensive)
+
 ## Generated Agent Types
 
 Depending on your project, you may get agents like:
@@ -51,9 +75,15 @@ Depending on your project, you may get agents like:
 
 ## Components
 
-- **Command**: `/agent-team-creator:generate-agent-team` - Main entry point
-- **Agent**: `team-architect` - Orchestrates the analysis and generation process
-- **Skill**: `agent-generation` - Best practices for creating effective agents
+### Commands
+- `/generate-agent-team` - Analyze project and generate specialized agent team
+- `/generate-debugger` - Generate project-specific debugger that orchestrates agents
+
+### Agents
+- `team-architect` - Orchestrates the analysis and team generation process
+
+### Skills
+- `agent-generation` - Best practices for creating effective agents
 
 ## License
 
