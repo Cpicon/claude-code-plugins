@@ -149,6 +149,43 @@ Use the Task tool with subagent_type="agent-team-creator:implementation-planner"
 to analyze the debugging report and generate an implementation plan.
 ```
 
+### Agent Output Handling
+
+When a command invokes an agent via the Task tool:
+
+1. **Agent execution**: The agent runs with its own context and tools
+2. **Output return**: Agent's response (markdown text) is returned to the command
+3. **Command receives text**: The complete agent output becomes available as text
+4. **Command validates**: Parse output for required sections using markdown patterns
+5. **Command continues**: Use validated output as input to next phase
+
+**Data Flow Between Phases**:
+```
+Phase 2: Load Report (File Read) ─────────────────────────────────┐
+         └─ debugging_report_content (string)                      │
+                                                                   │
+Phase 4: Task(implementation-planner) ◄────────────────────────────┤
+         │   Input: debugging_report_content                       │
+         └─ implementation_plan (string) ──────────────────────────┤
+                                                                   │
+Phase 5: Task(jira-writer) ◄───────────────────────────────────────┤
+         │   Input: debugging_report_content + implementation_plan │
+         └─ jira_content (string) ─────────────────────────────────┤
+                                                                   │
+Phase 6: Create Issue (MCP) ◄──────────────────────────────────────┘
+         │   Input: jira_content (parsed for summary, description)
+         └─ issue_key, issue_url
+```
+
+**Validation Pattern** (command-level):
+```
+After invoking agent, check output contains:
+- Required headers (## Section Name)
+- Required fields (**Field:**)
+- Non-empty content blocks
+If missing, warn user and offer to abort or continue.
+```
+
 ### Integration Method: Atlassian MCP Plugin Only
 
 | Decision | Choice | Rationale |
@@ -280,10 +317,18 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    ```
    mcp__plugin_atlassian_atlassian__getAccessibleAtlassianResources()
    ```
-   - If fails → Set `FALLBACK_MODE = true` (markdown output only)
-   - If succeeds → Continue with full flow
+   - If fails (tool not found) → Set `FALLBACK_MODE = true` (markdown output only)
+   - If succeeds → Continue to auth check
 
-2. **If FALLBACK_MODE** is set:
+2. **Verify Atlassian authentication** (if plugin available)
+   ```
+   mcp__plugin_atlassian_atlassian__atlassianUserInfo()
+   ```
+   - If fails (401/403 or empty response) → Set `FALLBACK_MODE = true`
+   - Notify user: "Not authenticated with Atlassian. Please run `claude mcp auth --server atlassian` to authenticate."
+   - If succeeds → Continue with full flow (user is logged in)
+
+3. **If FALLBACK_MODE** is set:
    - **Skip Phase 1** (Project Resolution) - requires MCP
    - **Skip Phase 3** (Duplicate Check) - requires MCP
    - **Continue Phases 2, 4, 5** - these work without MCP
@@ -409,12 +454,28 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - Display file path and instructions for manual Jira creation
    - End
 
-2. **If normal mode**, call Atlassian plugin:
+2. **If normal mode**, validate and create:
+
+   **Step 2a: Validate Issue Type**
+   ```
+   mcp__plugin_atlassian_atlassian__getJiraProjectIssueTypesMetadata({
+     cloudId: [cached],
+     projectIdOrKey: [cached projectKey]
+   })
+   ```
+   - Extract available issue types from response
+   - Check if determined type (Bug|Task) exists in project
+   - If not, find closest match or prompt user to select:
+     - "Bug" may be named "Bug", "Defect", "Issue" in different projects
+     - "Task" may be named "Task", "Story", "Development Task"
+   - If no suitable match found, ask user to select from available types
+
+   **Step 2b: Create Issue**
    ```
    mcp__plugin_atlassian_atlassian__createJiraIssue({
      cloudId: [cached],
      projectKey: [cached],
-     issueTypeName: [Bug|Task],
+     issueTypeName: [validated issue type],
      summary: [from jira-writer],
      description: [from jira-writer],
      additional_fields: {

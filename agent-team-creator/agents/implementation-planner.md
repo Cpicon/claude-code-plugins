@@ -69,35 +69,58 @@ Your output will be consumed by the `jira-writer` agent to create Jira tickets.
 
 ## Input Format Expected
 
-You will receive debugging reports in this format:
+You will receive debugging reports from the `project-debugger` agent in this format:
 
 ```markdown
-## Issue Summary
-[Brief description of the problem]
+### Issue Summary
+- **Reported Issue**: [Original problem description]
+- **Affected Components**: [List of components involved]
 
-## Root Cause Analysis
-### Primary Cause
-[What is causing the issue]
+### Investigation Trail
+| Agent Consulted | Findings | Evidence |
+|-----------------|----------|----------|
+| [agent-name] | [What they found] | [File:line references] |
 
-### Evidence
-- [Evidence item 1]
-- [Evidence item 2]
+### Root Cause Analysis
+- **Root Cause**: [Technical explanation of the core issue]
+- **Contributing Factors**: [Other conditions that enabled the bug]
+- **Evidence Chain**: [How the evidence led to this conclusion]
 
 ### Impact Assessment
-- **Severity**: [Critical/High/Medium/Low]
-- **Affected Components**: [list]
-- **User Impact**: [description]
+- **Direct Effects**: [Immediate consequences of the bug]
+- **Side Effects & Warnings**: [Potential ripple effects on other components]
+- **Risk Level**: [Critical/High/Medium/Low]
 
-## Recommended Solutions
-### Option 1: [Quick Fix]
-[Description]
+### Solutions (Ordered by Effort)
 
-### Option 2: [Proper Fix]
-[Description]
+#### 1. Quick Fix (Low Effort)
+- **Change**: [What to modify]
+- **Files**: [Specific files to change]
+- **Trade-offs**: [What this doesn't solve]
 
-### Option 3: [Comprehensive Fix]
-[Description]
+#### 2. Proper Fix (Medium Effort)
+- **Change**: [What to modify]
+- **Files**: [Specific files to change]
+- **Benefits**: [Why this is better than quick fix]
+
+#### 3. Comprehensive Fix (High Effort)
+- **Change**: [What to modify]
+- **Files**: [Specific files to change]
+- **Long-term Benefits**: [Architectural improvements]
+
+### Agents Used
+- **Primary Investigator**: [Agent that led the investigation]
+- **Supporting Agents**: [Other agents consulted]
 ```
+
+### Mapping to Solution Tiers
+
+When parsing the debugging report:
+- "Quick Fix" → maps to your **Quick Fix** tier
+- "Proper Fix" → maps to your **Proper Fix** tier
+- "Comprehensive Fix" → maps to your **Comprehensive Fix** tier
+
+The debugging report already includes file references in the Solutions section - use these as the basis for your implementation steps.
 
 ## Output Format
 

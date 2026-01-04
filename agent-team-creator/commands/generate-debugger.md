@@ -75,7 +75,7 @@ name: project-debugger
 description: [Project-specific description with trigger examples]
 model: inherit
 color: red
-tools: ["Read", "Grep", "Glob", "Bash", "Task"]
+tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
 ---
 
 [System prompt with:]
