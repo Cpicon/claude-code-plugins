@@ -63,6 +63,45 @@ The debugger will:
 - Impact assessment and side effects
 - Solutions ordered by effort (quick/proper/comprehensive)
 
+**Report Storage:**
+- Reports are saved to `.claude/reports/debugging/report-{timestamp}.md`
+- Use these reports as input to `/generate-jira-task`
+
+### Generate Jira Task from Debugging Report
+
+After a debugging session, create a structured Jira task:
+
+```
+/generate-jira-task
+```
+
+Or specify a particular report:
+```
+/generate-jira-task .claude/reports/debugging/report-2026-01-03-1530.md
+```
+
+The command will:
+1. Load and validate the debugging report
+2. Design an implementation plan via `implementation-planner` agent
+3. Format Jira content via `jira-writer` agent
+4. Check for duplicate issues (if Atlassian MCP available)
+5. Create the issue in Jira (or generate markdown draft if unavailable)
+
+**Requirements:**
+- Atlassian MCP plugin for direct Jira creation (optional - falls back to markdown)
+- Debugging report from `/generate-debugger` workflow
+
+**Output:**
+- **Normal mode**: Jira issue key (e.g., PROJ-123) with URL
+- **Fallback mode**: Markdown draft in `.claude/reports/jira-drafts/`
+
+**Features:**
+- Automatic project key caching (configured once per git project)
+- Duplicate detection before creating new issues
+- Issue type inference (Bug vs Task) from report content
+- Label generation and sanitization for Jira compatibility
+- Graceful fallback when Atlassian MCP is unavailable
+
 ## Generated Agent Types
 
 Depending on your project, you may get agents like:
@@ -78,9 +117,12 @@ Depending on your project, you may get agents like:
 ### Commands
 - `/generate-agent-team` - Analyze project and generate specialized agent team
 - `/generate-debugger` - Generate project-specific debugger that orchestrates agents
+- `/generate-jira-task` - Transform debugging reports into Jira tasks
 
 ### Agents
 - `team-architect` - Orchestrates the analysis and team generation process
+- `implementation-planner` - Designs implementation plans from debugging reports
+- `jira-writer` - Formats content for Jira with evidence preservation
 
 ### Skills
 - `agent-generation` - Best practices for creating effective agents

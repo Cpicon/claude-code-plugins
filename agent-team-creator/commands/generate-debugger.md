@@ -75,7 +75,7 @@ name: project-debugger
 description: [Project-specific description with trigger examples]
 model: inherit
 color: red
-tools: ["Read", "Grep", "Glob", "Bash", "Task"]
+tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
 ---
 
 [System prompt with:]
@@ -83,8 +83,11 @@ tools: ["Read", "Grep", "Glob", "Bash", "Task"]
 2. Project-specific orchestration patterns (generated in Phase 2)
 3. Delegation protocol for consulting specialists
 4. Core rules and behavioral constraints
-5. Mandatory report format
+5. **CRITICAL: Report Persistence section** (saves reports to files)
+6. Mandatory report format
 ```
+
+> **CRITICAL**: The generated debugger MUST include the Report Persistence section. Without it, debugging reports will not be saved to files and the `/generate-jira-task` command will fail to find them.
 
 ### Phase 4: Required Debugger Sections
 
@@ -123,11 +126,38 @@ The generated debugger agent MUST include ALL of the following:
 ...
 ```
 
-#### 4. Mandatory Report Format Section
+#### 4. Report Persistence Section (CRITICAL - DO NOT SKIP)
+
+> **WARNING**: This section is REQUIRED. If you do not include this section, the `/generate-jira-task` command will fail because it cannot find saved debugging reports.
+
+```markdown
+## Report Persistence
+
+**MANDATORY**: After EVERY debugging session, you MUST save the report to a file.
+
+### Save Location
+- **Directory**: `.claude/reports/debugging/`
+- **Create directory if it doesn't exist**: Use Write tool to create the path
+
+### File Naming
+- **Format**: `report-{YYYY-MM-DD-HHmm}.md`
+- **Example**: `report-2026-01-03-1530.md`
+
+### Save Policy
+- Always create a NEW file with timestamp (preserve history, never overwrite)
+- Save the COMPLETE debugging report (all sections)
+
+### After Saving
+Tell the user:
+1. "Report saved to: .claude/reports/debugging/report-{timestamp}.md"
+2. "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
+```
+
+#### 5. Mandatory Report Format Section
 ```markdown
 ## Mandatory Output: Debugging Report
 
-After every debugging session, produce this report:
+After every debugging session, produce this report AND save it to a file:
 
 ### Issue Summary
 - **Reported Issue**: [Original problem description]
@@ -189,6 +219,7 @@ Generates `project-debugger.md` in `.claude/agents/` with:
 - Complete knowledge of all existing project agents
 - Core rules preventing direct implementation
 - Orchestration patterns adapted to project architecture
+- **Report persistence instructions** (saves to `.claude/reports/debugging/`)
 - Mandatory report format with agent trail
 
 ## Example Output Structure
@@ -248,10 +279,44 @@ You are the debugging orchestrator for this Next.js/Express/PostgreSQL applicati
 3. Finally frontend-expert (rendering)
 4. Produce report with full investigation trail
 
+## Report Persistence
+
+**MANDATORY**: After EVERY debugging session, you MUST save the report to a file.
+
+### Save Location
+- **Directory**: `.claude/reports/debugging/`
+- **Create directory if it doesn't exist**: Use Write tool to create the path
+
+### File Naming
+- **Format**: `report-{YYYY-MM-DD-HHmm}.md`
+- **Example**: `report-2026-01-03-1530.md`
+
+### Save Policy
+- Always create a NEW file with timestamp (preserve history, never overwrite)
+- Save the COMPLETE debugging report (all sections)
+
+### After Saving
+Tell the user:
+1. "Report saved to: .claude/reports/debugging/report-{timestamp}.md"
+2. "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
+
 ## Mandatory Output: Debugging Report
 
-[Full report format as specified above]
+[Full report format with all sections - MUST save to file after producing]
 ```
+
+### Phase 5: Verify Generated Debugger
+
+After writing the debugger file, verify it contains ALL required sections:
+
+**Required Section Checklist:**
+- [ ] `## Core Rules` - Coordination principles
+- [ ] `## Available Specialists` - Table of project agents
+- [ ] `## Debugging Orchestration Patterns` - At least 2 patterns
+- [ ] `## Report Persistence` - **CRITICAL** - File save instructions
+- [ ] `## Mandatory Output: Debugging Report` - Report format template
+
+If any section is missing, add it before completing. The Report Persistence section is especially critical - without it, reports won't be saved and `/generate-jira-task` will fail.
 
 ## Prerequisites
 
