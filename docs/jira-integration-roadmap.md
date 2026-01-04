@@ -2,8 +2,8 @@
 
 > **File**: `jira-integration-roadmap.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-03 (Session 2: Deep Analysis & Updates)
-> **Status**: In Progress - Agents Ready, Command Next
+> **Updated**: 2026-01-03 (Session 3: Research & Architecture Finalization)
+> **Status**: In Progress - Architecture Complete, Command Implementation Next
 > **Plugin**: `agent-team-creator`
 > **Author**: Christian Picon Calderon
 
@@ -59,14 +59,50 @@ This separation follows industry best practices and avoids known Claude Code lim
 ## Workflow
 
 ```
-/generate-debugger → Debugging Report → /generate-jira-task → Jira Task
-        ↓                                       ↓
-   Evidence-based                     Command orchestrates:
-   investigation                      • Phase 1-3: MCP operations (command)
-   with specialists                   • Phase 4: implementation-planner (agent)
-                                      • Phase 5: jira-writer (agent)
-                                      • Phase 6: MCP create issue (command)
+/generate-debugger → project-debugger agent → Debugging Report FILE
+        ↓                    ↓                        ↓
+   Creates debugger     Saves to:              .claude/reports/debugging/
+   agent for project    report-{timestamp}.md
+                              ↓
+                        /generate-jira-task
+                              ↓
+                        Command orchestrates:
+                        • Phase 0: Check MCP availability
+                        • Phase 1: Project resolution (MCP) [SKIP in fallback]
+                        • Phase 2: Load debugging report (File Read)
+                        • Phase 3: Duplicate check (MCP) [SKIP in fallback]
+                        • Phase 4: implementation-planner (agent)
+                        • Phase 5: jira-writer (agent)
+                        • Phase 6: Create issue (MCP) or markdown (fallback)
 ```
+
+### Report Storage Structure
+
+Reports are stored in a generic, plugin-agnostic location for reuse by other tools:
+
+```
+.claude/
+├── agents/                  # Project-specific agents
+├── reports/                 # Generated reports (NEW)
+│   ├── debugging/           # Debugging investigation reports
+│   │   └── report-2026-01-03-1530.md
+│   └── jira-drafts/         # Fallback Jira drafts (when MCP unavailable)
+│       └── draft-2026-01-03-1545.md
+└── CLAUDE.md
+```
+
+### Debugging Report Pipeline
+
+The debugger agent created by `/generate-debugger` MUST save debugging reports to files:
+
+| Step | Action | Location |
+|------|--------|----------|
+| 1 | User runs `/generate-debugger` | Creates `project-debugger.md` agent |
+| 2 | User asks debugger agent to investigate | Agent produces Debugging Report |
+| 3 | Debugger agent saves report to file | `.claude/reports/debugging/report-{timestamp}.md` |
+| 4 | User runs `/generate-jira-task` | Reads most recent report from `.claude/reports/debugging/` |
+
+**Important**: Users must run the debugger agent to investigate an issue BEFORE running `/generate-jira-task`. The command expects a debugging report file to exist.
 
 ---
 
@@ -87,6 +123,31 @@ Multiple GitHub issues report that **plugin-defined agents cannot reliably acces
 - [Issue #15810](https://github.com/anthropics/claude-code/issues/15810): Subagents not inheriting MCP tools
 
 **Solution**: Keep all MCP operations at the command level, where they work reliably.
+
+### Command Execution Model
+
+When a user runs `/generate-jira-task`:
+
+1. **Claude Code loads the command file** (`generate-jira-task.md`)
+2. **Command markdown becomes Claude's context** - The instructions are the system prompt
+3. **Claude follows instructions using `allowed-tools`** - Including MCP tools for I/O
+4. **Agent invocation uses Task tool** with specific `subagent_type`
+
+### Task Tool Subagent Syntax for Bundled Agents
+
+**Pattern**: `{plugin-name}:{agent-name}`
+
+| Agent | subagent_type |
+|-------|---------------|
+| implementation-planner | `agent-team-creator:implementation-planner` |
+| jira-writer | `agent-team-creator:jira-writer` |
+| context-summarizer | `agent-team-creator:context-summarizer` |
+
+**Example Task invocation in command**:
+```
+Use the Task tool with subagent_type="agent-team-creator:implementation-planner"
+to analyze the debugging report and generate an implementation plan.
+```
 
 ### Integration Method: Atlassian MCP Plugin Only
 
@@ -222,12 +283,16 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - If fails → Set `FALLBACK_MODE = true` (markdown output only)
    - If succeeds → Continue with full flow
 
-2. **If FALLBACK_MODE**:
-   - Skip Jira API calls in later phases
-   - Generate markdown file to `.claude/jira-task-draft-{timestamp}.md`
-   - Provide instructions for manual Jira creation
+2. **If FALLBACK_MODE** is set:
+   - **Skip Phase 1** (Project Resolution) - requires MCP
+   - **Skip Phase 3** (Duplicate Check) - requires MCP
+   - **Continue Phases 2, 4, 5** - these work without MCP
+   - **Phase 6**: Write to markdown file instead of creating Jira issue
+   - Notify user: "Atlassian MCP unavailable. Generating markdown draft for manual copy."
 
 ### Phase 1: Project Resolution (COMMAND - MCP)
+
+> **⚠️ SKIP if FALLBACK_MODE**: This phase requires MCP. In fallback mode, skip directly to Phase 2.
 
 1. **Check for cached project**
    - Read `.claude/jira-project.json` if exists
@@ -252,7 +317,7 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
 
 1. Read debugging report from:
    - Provided file path argument, OR
-   - Most recent `debugging-report-*.md` in `.claude/` directory, OR
+   - Most recent `report-*.md` in `.claude/reports/debugging/` directory, OR
    - Prompt user for location
 
 2. **Validate report format**:
@@ -267,6 +332,8 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - **Solutions** → Implementation guidance
 
 ### Phase 3: Duplicate Check (COMMAND - MCP)
+
+> **⚠️ SKIP if FALLBACK_MODE**: This phase requires MCP. In fallback mode, skip directly to Phase 4.
 
 1. **Extract keywords** from issue summary and root cause
 2. **Search for similar tasks** via MCP:
@@ -337,8 +404,9 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
 ### Phase 6: Create Jira Issue (COMMAND - MCP)
 
 1. **If FALLBACK_MODE**:
-   - Write formatted content to `.claude/jira-task-draft-{timestamp}.md`
-   - Display file path and instructions
+   - Create `.claude/reports/jira-drafts/` directory if needed
+   - Write formatted content to `.claude/reports/jira-drafts/draft-{timestamp}.md`
+   - Display file path and instructions for manual Jira creation
    - End
 
 2. **If normal mode**, call Atlassian plugin:
@@ -578,6 +646,10 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 | Can plugin agents use MCP? | Unreliable (bug) - avoid |
 | Should we use CLI or MCP? | MCP only |
 | Where do MCP operations go? | Command level only |
+| What is Task tool subagent_type syntax? | `{plugin-name}:{agent-name}` (e.g., `agent-team-creator:implementation-planner`) |
+| Who executes command workflow? | Claude Code reads command file, follows instructions using allowed-tools |
+| Where are debugging reports stored? | `.claude/reports/debugging/report-{timestamp}.md` |
+| What happens in FALLBACK_MODE? | Skip Phase 1 and 3; write markdown to `.claude/reports/jira-drafts/` |
 
 ---
 
@@ -588,9 +660,11 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 | `implementation-planner.md` | ✅ CREATED | Designs implementation steps from debugging reports |
 | `jira-writer.md` | ✅ UPDATED | Added debugging context support |
 | `duplicate-detector.md` | 🗑️ REMOVED | Replaced by command-level MCP |
+| `generate-debugger.md` | ✅ UPDATED | Added report persistence to `.claude/reports/debugging/` |
 | `generate-jira-task.md` | ⏳ NEXT | Command to implement |
-| Problem description | ✅ UPDATED | Synced with architecture decisions |
-| Roadmap validation | ✅ UPDATED | Added output validation between phases |
+| Problem description | ✅ UPDATED | Synced with architecture decisions, added report storage |
+| Roadmap | ✅ UPDATED | Added Task tool syntax, FALLBACK_MODE behavior, report pipeline |
+| Architecture research | ✅ COMPLETE | Command execution model, subagent_type syntax documented |
 
 ---
 
@@ -598,6 +672,9 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 1. ~~**Create `implementation-planner.md` agent**~~ - ✅ DONE
 2. ~~**Update `jira-writer.md` with debugging context**~~ - ✅ DONE
-3. **Create `generate-jira-task.md` command** - MVP with fallback mode
-4. **Test implementation-planner** with sample debugging reports
-5. **Test end-to-end** - Validate the hybrid architecture works
+3. ~~**Research Task tool subagent syntax**~~ - ✅ DONE (`agent-team-creator:{agent-name}`)
+4. ~~**Define FALLBACK_MODE behavior**~~ - ✅ DONE (skip Phase 1 and 3)
+5. ~~**Update generate-debugger for report persistence**~~ - ✅ DONE
+6. **Create `generate-jira-task.md` command** - MVP with fallback mode
+7. **Test implementation-planner** with sample debugging reports
+8. **Test end-to-end** - Validate the hybrid architecture works

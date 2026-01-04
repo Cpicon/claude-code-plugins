@@ -123,11 +123,26 @@ The generated debugger agent MUST include ALL of the following:
 ...
 ```
 
-#### 4. Mandatory Report Format Section
+#### 4. Report Persistence Section (MANDATORY)
+```markdown
+## Report Persistence
+
+After EVERY debugging session, you MUST save the report to a file:
+
+1. **Directory**: `.claude/reports/debugging/`
+   - Create this directory structure if it doesn't exist
+2. **Filename**: `report-{YYYY-MM-DD-HHmm}.md` (e.g., `report-2026-01-03-1530.md`)
+3. **Policy**: Always create a new file with timestamp (preserve history)
+4. **After saving**, tell the user:
+   - The file path where the report was saved
+   - "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
+```
+
+#### 5. Mandatory Report Format Section
 ```markdown
 ## Mandatory Output: Debugging Report
 
-After every debugging session, produce this report:
+After every debugging session, produce this report AND save it to a file:
 
 ### Issue Summary
 - **Reported Issue**: [Original problem description]
@@ -189,6 +204,7 @@ Generates `project-debugger.md` in `.claude/agents/` with:
 - Complete knowledge of all existing project agents
 - Core rules preventing direct implementation
 - Orchestration patterns adapted to project architecture
+- **Report persistence instructions** (saves to `.claude/reports/debugging/`)
 - Mandatory report format with agent trail
 
 ## Example Output Structure
@@ -248,9 +264,18 @@ You are the debugging orchestrator for this Next.js/Express/PostgreSQL applicati
 3. Finally frontend-expert (rendering)
 4. Produce report with full investigation trail
 
+## Report Persistence
+
+After EVERY debugging session, you MUST save the report to a file:
+
+1. **Directory**: `.claude/reports/debugging/` (create if needed)
+2. **Filename**: `report-{YYYY-MM-DD-HHmm}.md`
+3. **Policy**: Always create new file with timestamp
+4. **After saving**: Tell user the file path and suggest running `/agent-team-creator:generate-jira-task`
+
 ## Mandatory Output: Debugging Report
 
-[Full report format as specified above]
+[Full report format as specified above - save to file after producing]
 ```
 
 ## Prerequisites

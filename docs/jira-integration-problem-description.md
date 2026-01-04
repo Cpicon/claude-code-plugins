@@ -284,16 +284,19 @@ Create a `/generate-jira-task` command that **automatically transforms debugging
 ```
 /generate-jira-task [debugging-report-path]
         ↓
-Phase 1: Project Resolution
+Phase 0: Check MCP Availability
+  - If unavailable → FALLBACK_MODE (skip Phase 1, 3)
+        ↓
+Phase 1: Project Resolution (MCP) [SKIP in fallback]
   - Check for cached Jira project key
   - If first run: prompt, search, confirm, cache
         ↓
 Phase 2: Load Debugging Report
-  - Read from argument or find recent reports
+  - Read from argument or find recent in .claude/reports/debugging/
   - Extract issue summary, root cause, impact, solutions
         ↓
-Phase 3: Duplicate Check
-  - Invoke duplicate-detector agent
+Phase 3: Duplicate Check (MCP) [SKIP in fallback]
+  - Command-level JQL search
   - Warn if similar task exists
         ↓
 Phase 4: Implementation Planning
@@ -307,13 +310,25 @@ Phase 5: Jira Content Generation
   - Generate labels
         ↓
 Phase 6: Create Jira Issue
-  - Call Atlassian plugin API
+  - Call Atlassian plugin API (or write to .claude/reports/jira-drafts/ in fallback)
   - Return issue key and URL
+```
+
+### Report Storage Location
+
+Debugging reports are stored in a plugin-agnostic location for reuse by other tools:
+
+```
+.claude/reports/
+├── debugging/           # Debugging investigation reports
+│   └── report-{timestamp}.md
+└── jira-drafts/         # Fallback Jira drafts (when MCP unavailable)
+    └── draft-{timestamp}.md
 ```
 
 ### Input: Debugging Report
 
-The command expects the structured report from `/generate-debugger`:
+The command expects the structured report from `/generate-debugger`, saved to `.claude/reports/debugging/`:
 
 - **Issue Summary** → Becomes task title
 - **Root Cause Analysis** → Problem description
