@@ -168,8 +168,13 @@ Phase 4: Task(implementation-planner) ◄─────────────
          │   Input: debugging_report_content                       │
          └─ implementation_plan (string) ──────────────────────────┤
                                                                    │
+         ┌─ CONCATENATION STEP (command formats input) ────────────┤
+         │   Format: "## Debugging Report\n\n{report}\n\n         │
+         │            ## Implementation Plan\n\n{plan}"            │
+         └─ combined_input (string) ───────────────────────────────┤
+                                                                   │
 Phase 5: Task(jira-writer) ◄───────────────────────────────────────┤
-         │   Input: debugging_report_content + implementation_plan │
+         │   Input: combined_input (formatted as shown above)      │
          └─ jira_content (string) ─────────────────────────────────┤
                                                                    │
 Phase 6: Create Issue (MCP) ◄──────────────────────────────────────┘
@@ -419,7 +424,22 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
 ### Phase 5: Jira Content Generation (AGENT - Pure Formatting)
 
 1. **Invoke `jira-writer` agent**
-   - Input: Debugging report + implementation plan from Phase 4
+
+   **Input Format** (CRITICAL - must concatenate correctly):
+   ```markdown
+   ## Debugging Report
+
+   {debugging_report_content from Phase 2}
+
+   ## Implementation Plan
+
+   {implementation_plan from Phase 4}
+   ```
+
+   The command MUST format the input exactly as shown above. The jira-writer
+   agent expects both sections with these exact headers to correctly parse
+   and preserve the evidence chain.
+
    - Output: Jira-formatted content:
      - **Summary**: Action verb + component + outcome
      - **Description**: Background, root cause, impact, implementation plan
@@ -586,6 +606,7 @@ allowed-tools:
   - mcp__plugin_atlassian_atlassian__getAccessibleAtlassianResources
   - mcp__plugin_atlassian_atlassian__searchJiraIssuesUsingJql
   - mcp__plugin_atlassian_atlassian__getJiraProjectIssueTypesMetadata
+  - mcp__plugin_atlassian_atlassian__atlassianUserInfo
 argument-hint: "[debugging-report-path]"
 ---
 
@@ -610,7 +631,7 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 ## Usage
 
 /agent-team-creator:generate-jira-task
-/agent-team-creator:generate-jira-task .claude/debugging-report-2026-01-03.md
+/agent-team-creator:generate-jira-task .claude/reports/debugging/report-2026-01-03-1530.md
 
 ## Output
 
