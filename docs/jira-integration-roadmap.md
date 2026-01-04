@@ -2,8 +2,8 @@
 
 > **File**: `jira-integration-roadmap.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-03 (Session 3: Research & Architecture Finalization)
-> **Status**: In Progress - Architecture Complete, Command Implementation Next
+> **Updated**: 2026-01-04 (Session 4: Documentation Cleanup)
+> **Status**: In Progress - Ready for Command Implementation
 > **Plugin**: `agent-team-creator`
 > **Author**: Christian Picon Calderon
 
@@ -221,12 +221,6 @@ agent-team-creator/agents/
 | `implementation-planner` | Analyze debugging report, design implementation steps | No | CREATED |
 | `jira-writer` | Format content into Jira-compatible structure (with debugging context support) | No | UPDATED |
 | `context-summarizer` | Reserved for future Jira context analysis | No | NOT USED (v1) |
-
-### Removed Agents
-
-| Agent | Reason | Replacement |
-|-------|--------|-------------|
-| `duplicate-detector` | MCP operations must be at command level (bug workaround) | Command-level JQL search in Phase 3 |
 
 ---
 
@@ -644,44 +638,35 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 ## Files to Create/Modify
 
-| File | Action | Status | Purpose |
-|------|--------|--------|---------|
-| `agent-team-creator/agents/implementation-planner.md` | CREATE | ✅ DONE | Designs fix approach (no MCP) |
-| `agent-team-creator/agents/jira-writer.md` | MODIFY | ✅ DONE | Added debugging context support |
-| `agent-team-creator/agents/duplicate-detector.md` | DELETE | ✅ DONE | Removed (MCP at command level) |
-| `agent-team-creator/commands/generate-jira-task.md` | CREATE | ⏳ NEXT | Orchestration command with MCP |
-| `agent-team-creator/README.md` | MODIFY | ⏳ PENDING | Document new command |
-| `README.md` (marketplace) | MODIFY | ⏳ PENDING | Update plugin description |
-| `docs/jira-integration-problem-description.md` | MODIFY | ✅ DONE | Synced with architecture decisions |
-| `docs/jira-integration-roadmap.md` | MODIFY | ✅ DONE | Added validation, future work |
+| File | Action | Purpose |
+|------|--------|---------|
+| `agent-team-creator/commands/generate-jira-task.md` | CREATE | Orchestration command with MCP |
+| `agent-team-creator/README.md` | MODIFY | Document new command |
+| `README.md` (marketplace) | MODIFY | Update plugin description |
 
 ---
 
 ## Implementation Order
 
-### Sprint 1: Foundation
-1. [x] Create `implementation-planner.md` agent (standalone, testable)
-2. [ ] Test implementation-planner with sample debugging reports
+### Sprint 1: MVP Command (Markdown Only)
+1. [ ] Create `generate-jira-task.md` command skeleton
+2. [ ] Implement Phase 0: Prerequisite check with fallback mode
+3. [ ] Implement Phase 2: Load and validate debugging report
+4. [ ] Implement Phase 4: Invoke implementation-planner agent
+5. [ ] Implement Phase 5: Invoke jira-writer agent
+6. [ ] Test end-to-end markdown generation (fallback mode)
 
-### Sprint 2: MVP Command (Markdown Only)
-3. [ ] Create `generate-jira-task.md` command skeleton
-4. [ ] Implement Phase 0: Prerequisite check with fallback mode
-5. [ ] Implement Phase 2: Load and validate debugging report
-6. [ ] Implement Phase 4: Invoke implementation-planner agent
-7. [ ] Implement Phase 5: Invoke jira-writer agent
-8. [ ] Test end-to-end markdown generation (fallback mode)
+### Sprint 2: Jira Integration
+7. [ ] Implement Phase 1: Project resolution with caching
+8. [ ] Implement Phase 3: Duplicate check via MCP
+9. [ ] Implement Phase 6: Create Jira issue via MCP
+10. [ ] Test end-to-end with real Jira
 
-### Sprint 3: Jira Integration
-9. [ ] Implement Phase 1: Project resolution with caching
-10. [ ] Implement Phase 3: Duplicate check via MCP
-11. [ ] Implement Phase 6: Create Jira issue via MCP
-12. [ ] Test end-to-end with real Jira
-
-### Sprint 4: Polish
-13. [ ] Add label generation logic
-14. [ ] Add issue type inference logic
-15. [ ] Update documentation
-16. [ ] End-to-end testing
+### Sprint 3: Polish
+11. [ ] Add label generation logic
+12. [ ] Add issue type inference logic
+13. [ ] Update documentation
+14. [ ] End-to-end testing
 
 ---
 
@@ -698,15 +683,7 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 ---
 
-## Risk Analysis (Updated)
-
-### Resolved Risks
-
-| Risk | Status | Resolution |
-|------|--------|------------|
-| Global agent dependency | ✅ RESOLVED | Agents bundled in plugin |
-| MCP access in agents | ✅ RESOLVED | MCP operations at command level |
-| CLI dependency | ✅ RESOLVED | MCP plugin only |
+## Risk Analysis
 
 ### Remaining Risks
 
@@ -719,44 +696,8 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 ---
 
-## Questions Resolved
-
-| Question | Answer |
-|----------|--------|
-| Can commands invoke agents? | Yes, via Task tool |
-| Can agents invoke other agents? | Yes, but only 1 level deep |
-| Can plugin agents use MCP? | Unreliable (bug) - avoid |
-| Should we use CLI or MCP? | MCP only |
-| Where do MCP operations go? | Command level only |
-| What is Task tool subagent_type syntax? | `{plugin-name}:{agent-name}` (e.g., `agent-team-creator:implementation-planner`) |
-| Who executes command workflow? | Claude Code reads command file, follows instructions using allowed-tools |
-| Where are debugging reports stored? | `.claude/reports/debugging/report-{timestamp}.md` |
-| What happens in FALLBACK_MODE? | Skip Phase 1 and 3; write markdown to `.claude/reports/jira-drafts/` |
-
----
-
-## Current Status
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `implementation-planner.md` | ✅ CREATED | Designs implementation steps from debugging reports |
-| `jira-writer.md` | ✅ UPDATED | Added debugging context support |
-| `duplicate-detector.md` | 🗑️ REMOVED | Replaced by command-level MCP |
-| `generate-debugger.md` | ✅ UPDATED | Added report persistence to `.claude/reports/debugging/` |
-| `generate-jira-task.md` | ⏳ NEXT | Command to implement |
-| Problem description | ✅ UPDATED | Synced with architecture decisions, added report storage |
-| Roadmap | ✅ UPDATED | Added Task tool syntax, FALLBACK_MODE behavior, report pipeline |
-| Architecture research | ✅ COMPLETE | Command execution model, subagent_type syntax documented |
-
----
-
 ## Next Steps
 
-1. ~~**Create `implementation-planner.md` agent**~~ - ✅ DONE
-2. ~~**Update `jira-writer.md` with debugging context**~~ - ✅ DONE
-3. ~~**Research Task tool subagent syntax**~~ - ✅ DONE (`agent-team-creator:{agent-name}`)
-4. ~~**Define FALLBACK_MODE behavior**~~ - ✅ DONE (skip Phase 1 and 3)
-5. ~~**Update generate-debugger for report persistence**~~ - ✅ DONE
-6. **Create `generate-jira-task.md` command** - MVP with fallback mode
-7. **Test implementation-planner** with sample debugging reports
-8. **Test end-to-end** - Validate the hybrid architecture works
+1. **Create `generate-jira-task.md` command** - MVP with fallback mode
+2. **Test implementation-planner** with sample debugging reports
+3. **Test end-to-end** - Validate the hybrid architecture works
