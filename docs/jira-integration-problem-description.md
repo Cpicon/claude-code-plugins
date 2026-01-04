@@ -446,7 +446,7 @@ The command expects the structured report from `/generate-debugger`, saved to `.
 │  [Debugging happens] ──────→ Debugging Report                  │
 │          │                                                      │
 │          ↓                                                      │
-│  /generate-jira-task ──────→ Jira Task (📋 PLANNED)            │
+│  /generate-jira-task ──────→ Jira Task (🔧 IN DEVELOPMENT)     │
 │                                                                 │
 └────────────────────────────────────────────────────────────────┘
 ```

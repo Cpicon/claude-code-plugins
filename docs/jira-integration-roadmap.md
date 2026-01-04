@@ -2,7 +2,7 @@
 
 > **File**: `jira-integration-roadmap.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-04 (Session 5: Plan Clarifications)
+> **Updated**: 2026-01-04 (Session 6: HIGH/MEDIUM Priority Analysis)
 > **Status**: In Progress - Ready for Command Implementation
 > **Plugin**: `agent-team-creator`
 > **Author**: Christian Picon Calderon
@@ -224,7 +224,7 @@ agent-team-creator/agents/
 
 ---
 
-## Future Work: Duplication & Context Features
+## Future Work: Enhancements for v2
 
 These capabilities are planned for future versions but not included in v1:
 
@@ -239,6 +239,11 @@ These capabilities are planned for future versions but not included in v1:
 - **Future**: Before creating a task, fetch related Jira issues and summarize context
 - **Approach**: Command fetches issues via MCP, `context-summarizer` agent analyzes relationships
 - **Benefit**: Prevent duplicate work, understand related tasks, link issues appropriately
+
+### Cache Management (v2)
+- **Current**: Once configured, project key is cached permanently in `.claude/jira-project.json`
+- **Future**: Add cache invalidation triggers and manual project switching capability
+- **Rationale**: Project/cloud IDs rarely change during development; complexity deferred to v2
 
 ---
 
@@ -714,11 +719,11 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 ## Implementation Order
 
 ### Sprint 1: MVP Command (Markdown Only)
-1. [ ] Create `generate-jira-task.md` command skeleton
+1. [ ] Create `generate-jira-task.md` command with full phase logic
 2. [ ] Implement Phase 0: Prerequisite check with fallback mode
 3. [ ] Implement Phase 2: Load and validate debugging report
 4. [ ] Implement Phase 4: Invoke implementation-planner agent
-5. [ ] Implement Phase 5: Invoke jira-writer agent
+5. [ ] Implement Phase 5: Invoke jira-writer agent (includes label handling)
 6. [ ] Test end-to-end markdown generation (fallback mode)
 
 ### Sprint 2: Jira Integration
@@ -728,10 +733,10 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 10. [ ] Test end-to-end with real Jira
 
 ### Sprint 3: Polish
-11. [ ] Add label generation logic
-12. [ ] Add issue type inference logic
-13. [ ] Update documentation
-14. [ ] End-to-end testing
+11. [ ] Refine issue type inference keywords
+12. [ ] Update plugin README documentation
+13. [ ] Update marketplace README
+14. [ ] End-to-end testing with edge cases
 
 ---
 
