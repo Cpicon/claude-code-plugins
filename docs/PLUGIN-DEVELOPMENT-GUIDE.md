@@ -4,6 +4,18 @@
 
 ---
 
+> **Document Metadata**
+> - **Created**: 2026-01-04
+> - **Updated**: 2026-01-04
+> - **Claude Code Version**: As of January 2026
+> - **Status**: Active
+>
+> ⚠️ **Version Notice**: Claude Code is actively developed. Technical assumptions in this document
+> should be validated against current behavior when starting new plugin development. Check the
+> [Technical Findings](#technical-findings-claude-code-internals) section for known limitations.
+
+---
+
 ## Overview
 
 This guide provides templates and patterns for documenting plugin development. Following this structure enables:
@@ -477,6 +489,117 @@ Wait for agent to complete and receive output.
 
 Validate output contains required sections.
 ```
+
+---
+
+## Technical Findings: Claude Code Internals
+
+> ⚠️ **Important**: These findings document Claude Code behavior as of January 2026.
+> Validate assumptions before starting new development, as the tool evolves.
+
+### Validated Assumptions
+
+| Assumption | Result | Evidence |
+|------------|--------|----------|
+| Command → Agent invocation | ✅ WORKS | Task tool available in commands |
+| Agent → Agent invocation | ⚠️ 1-LEVEL ONLY | "Subagents cannot spawn subagents" |
+| Plugin agents → MCP tools | 🔴 BUG | GitHub #13605, #15810 - unreliable |
+
+### Key Limitation: MCP Tool Access Bug
+
+Multiple GitHub issues report that **plugin-defined agents cannot reliably access MCP tools**:
+- [Issue #13605](https://github.com/anthropics/claude-code/issues/13605): Custom plugin subagents cannot access MCP tools
+- [Issue #15810](https://github.com/anthropics/claude-code/issues/15810): Subagents not inheriting MCP tools
+
+**Solution**: Keep all MCP operations at the command level, where they work reliably.
+
+### Command Execution Model
+
+When a user runs `/plugin-name:command-name`:
+
+1. **Claude Code loads the command file** (`command-name.md`)
+2. **Command markdown becomes Claude's context** - The instructions are the system prompt
+3. **Claude follows instructions using `allowed-tools`** - Including MCP tools for I/O
+4. **Agent invocation uses Task tool** with specific `subagent_type`
+
+### Task Tool Subagent Syntax
+
+**Pattern**: `{plugin-name}:{agent-name}`
+
+| Agent | subagent_type Example |
+|-------|----------------------|
+| implementation-planner | `agent-team-creator:implementation-planner` |
+| jira-writer | `agent-team-creator:jira-writer` |
+| custom-agent | `your-plugin:custom-agent` |
+
+**Example Task invocation in command**:
+```markdown
+Use the Task tool with subagent_type="plugin-name:agent-name"
+to analyze the input and generate structured output.
+```
+
+### Agent Output Handling
+
+When a command invokes an agent via the Task tool:
+
+1. **Agent execution**: The agent runs with its own context and tools
+2. **Output return**: Agent's response (markdown text) is returned to the command
+3. **Command receives text**: The complete agent output becomes available as text
+4. **Command validates**: Parse output for required sections using markdown patterns
+5. **Command continues**: Use validated output as input to next phase
+
+### Data Flow Between Phases
+
+```
+Phase N: Load Data (File Read) ─────────────────────────────────┐
+         └─ data_content (string)                                │
+                                                                 │
+Phase N+1: Task(reasoning-agent) ◄───────────────────────────────┤
+         │   Input: data_content                                 │
+         └─ agent_output (string) ───────────────────────────────┤
+                                                                 │
+         ┌─ CONCATENATION STEP (command formats input) ──────────┤
+         │   Format: "## Section A\n\n{data}\n\n                 │
+         │            ## Section B\n\n{output}"                  │
+         └─ combined_input (string) ─────────────────────────────┤
+                                                                 │
+Phase N+2: Task(formatting-agent) ◄──────────────────────────────┤
+         │   Input: combined_input (formatted as shown above)    │
+         └─ formatted_output (string) ───────────────────────────┤
+                                                                 │
+Phase N+3: Create Output (MCP or File) ◄─────────────────────────┘
+         │   Input: formatted_output (parsed for fields)
+         └─ result (success/failure)
+```
+
+### Validation Pattern (Command-Level)
+
+```markdown
+After invoking agent, check output contains:
+- Required headers (## Section Name)
+- Required fields (**Field:**)
+- Non-empty content blocks
+If missing, warn user and offer to abort or continue.
+```
+
+### Subagent Nesting Limitation
+
+Claude Code restricts subagent depth to **one level**:
+- ✅ Command → Agent (works)
+- ❌ Command → Agent → Agent (blocked: "Subagents cannot spawn subagents")
+
+**Workaround**: If complex orchestration is needed, have the command invoke multiple agents sequentially rather than having agents invoke each other.
+
+### Known Working vs. Unreliable Patterns
+
+| Pattern | Status | Notes |
+|---------|--------|-------|
+| Command → MCP tools | ✅ Works | Use `allowed-tools` in command frontmatter |
+| Command → Task (agent) | ✅ Works | Use `subagent_type: "plugin:agent"` |
+| Command → Read/Write/Glob | ✅ Works | Standard file operations |
+| Agent → Read/Grep/Glob | ✅ Works | Pure file operations in agents |
+| Agent → MCP tools | 🔴 Bug | Unreliable, avoid in plugin agents |
+| Agent → Task (sub-agent) | ❌ Blocked | "Subagents cannot spawn subagents" |
 
 ---
 
