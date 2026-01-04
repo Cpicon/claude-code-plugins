@@ -2,7 +2,7 @@
 
 > **File**: `jira-integration-roadmap.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-04 (Session 4: Documentation Cleanup)
+> **Updated**: 2026-01-04 (Session 5: Plan Clarifications)
 > **Status**: In Progress - Ready for Command Implementation
 > **Plugin**: `agent-team-creator`
 > **Author**: Christian Picon Calderon
@@ -444,10 +444,29 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - Scan for keywords: "error", "bug", "defect", "crash" → "Bug"
    - Otherwise → "Task"
 
-3. **Command formats labels**:
+3. **Command formats labels** (COMMAND - Owns Label Generation):
+
+   > **Ownership Note**: The command owns label generation. The jira-writer may
+   > suggest labels, but the command applies final formatting and sanitization.
+
+   **Label Categories**:
    - Affected components → `component:frontend`, `component:api`
    - Risk level → `priority:high`, `priority:critical`
    - Technical domain → `type:security`, `type:performance`
+
+   **Jira Label Constraints**:
+   - No spaces allowed (use hyphens: `data-pipeline` not `data pipeline`)
+   - No special characters except hyphens and underscores
+   - Case-insensitive but conventionally lowercase
+   - Maximum 255 characters per label
+
+   **Sanitization Logic** (command responsibility):
+   ```
+   label = label.toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9\-_:]/g, '')
+                .substring(0, 255)
+   ```
 
 4. **Validate jira-writer output** (COMMAND - Validation)
    - Check for required fields:
@@ -459,6 +478,24 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
      - Ask user: "Jira content is incomplete. Proceed anyway?" / "Abort"
    - If validation passes:
      - Continue to Phase 6
+
+5. **Extract fields from jira-writer output** (COMMAND - Parsing)
+
+   The jira-writer agent outputs structured markdown with `**Field:**` markers.
+   The command extracts these fields for the createJiraIssue call:
+
+   | Marker | Extraction | Target Parameter |
+   |--------|------------|------------------|
+   | `**Summary:**` | Text after marker, trimmed | `summary` |
+   | `**Description:**` | All content until next `**` marker | `description` |
+   | `**Labels:**` | Parse as array (comma or bracket format) | `additional_fields.labels` |
+   | `**Priority:**` | Map to Jira priority ID if needed | Optional |
+
+   **Parsing Rules**:
+   - Use regex or string parsing to extract content after each marker
+   - Description may contain markdown formatting - preserve it
+   - Labels may be formatted as `[label1, label2]` or `label1, label2`
+   - Trim whitespace from all extracted values
 
 ### Phase 6: Create Jira Issue (COMMAND - MCP)
 
@@ -497,6 +534,28 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
      }
    })
    ```
+
+   **Step 2c: Error Recovery** (if createJiraIssue fails)
+
+   If the MCP call fails (network error, permission denied, field validation error):
+
+   1. **Capture error details**: Log the specific error message
+   2. **Fall back to markdown output**:
+      - Write to `.claude/reports/jira-drafts/draft-{timestamp}.md`
+      - Include the full formatted Jira content
+      - Add error context at the top of the file
+   3. **Notify user**:
+      - "Failed to create Jira issue: [error message]"
+      - "Saved draft to: [file path]"
+      - "You can manually create the issue using this content"
+
+   **Common Error Handling**:
+   | Error Type | Recovery Action |
+   |------------|-----------------|
+   | 401/403 Unauthorized | Prompt to re-authenticate |
+   | 400 Field Validation | Show which field failed, offer to edit |
+   | 404 Project Not Found | Clear cache, re-run project resolution |
+   | Network Error | Retry once, then fall back to markdown |
 
 3. **Return result**:
    - Display Jira issue key (e.g., PROJ-123)
@@ -583,6 +642,12 @@ Location: `agent-team-creator/commands/generate-jira-task.md`
 - Handles all MCP operations
 - Orchestrates agents for reasoning tasks
 - Manages caching and user interaction
+
+> **Implementation Note**: The command file will contain the complete implementation
+> of all phases (0-6) as defined in this roadmap. The phases documented above serve
+> as the specification; the command markdown will include the full logic, MCP calls,
+> agent invocations, validation steps, and error handling. This is not a skeleton
+> but the complete orchestration implementation.
 
 ```markdown
 ---
