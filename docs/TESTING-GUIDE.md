@@ -23,18 +23,18 @@ flowchart LR
     end
 
     subgraph "Agent Generation"
-        B[/generate-agent-team]
-        C[/generate-debugger]
+        B["generate-agent-team"]
+        C["generate-debugger"]
     end
 
     subgraph "Debug Workflow"
-        D[Debug Issue]
-        E[Report Saved]
+        D["Debug Issue"]
+        E["Report Saved"]
     end
 
     subgraph "Jira Integration"
-        F[/generate-jira-task]
-        G[Jira Draft]
+        F["generate-jira-task"]
+        G["Jira Draft"]
     end
 
     A --> B --> C --> D --> E --> F --> G
@@ -318,10 +318,10 @@ flowchart LR
     end
 
     subgraph "3. Test Workflow"
-        E[/generate-agent-team]
-        F[/generate-debugger]
-        G[Debug issue]
-        H[/generate-jira-task]
+        E["generate-agent-team"]
+        F["generate-debugger"]
+        G["Debug issue"]
+        H["generate-jira-task"]
     end
 
     A --> B --> C --> D --> E --> F --> G --> H
