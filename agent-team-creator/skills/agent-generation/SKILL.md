@@ -33,31 +33,53 @@ Each agent should have a distinct role without overlapping:
 
 ### 3. Strong Trigger Conditions
 
-Each agent needs specific, non-overlapping trigger phrases:
+Each agent needs specific, non-overlapping trigger phrases in the `description:` field, using `<example>` blocks:
 
 ```yaml
-whenToUse: |
-  This agent should be used when the user asks about "React component patterns",
+description: Use this agent when the user asks about "React component patterns",
   "hook usage in this project", "state management with Redux", or needs help
-  understanding how the frontend architecture works.
+  understanding how the frontend architecture works. Examples:
+
+<example>
+Context: User wants to create a React component
+user: "How do I create a new component in this project?"
+assistant: "I'll use the project-react-expert agent to guide you through the component patterns."
+<commentary>
+Framework-specific implementation questions trigger the tech-stack expert.
+</commentary>
+</example>
 ```
 
 ## Agent Structure Template
 
-Every generated agent follows this structure:
+Every generated agent **must** follow this structure. The system prompt goes in the **markdown body after the closing `---`**, not inside the frontmatter:
 
 ```markdown
 ---
-identifier: project-role-expert
-whenToUse: |
-  This agent should be used when... [specific triggers with project context]
-systemPrompt: |
-  [Comprehensive system prompt with project knowledge]
-tools: [Glob, Grep, Read, Edit, Write, Bash, LS, Task, WebFetch, WebSearch]
-color: "#hexcode"
-model: sonnet
+name: project-role-expert
+description: Use this agent when... [specific triggers with project context]. Examples:
+
+<example>
+Context: [Scenario description]
+user: "[User request]"
+assistant: "[How assistant responds and uses this agent]"
+<commentary>
+[Why this agent should be triggered]
+</commentary>
+</example>
+
+model: inherit
+color: blue
+tools: ["Glob", "Grep", "Read", "Edit", "Write", "Bash", "LS", "Task", "WebFetch", "WebSearch"]
 ---
+
+[Comprehensive system prompt with project knowledge goes here as markdown body]
 ```
+
+**Required fields:** `name`, `description` (with `<example>` blocks), `model`, `color`
+**Optional fields:** `tools` (omit for full access)
+**Valid colors:** `blue`, `cyan`, `green`, `yellow`, `magenta`, `red`
+**Valid models:** `inherit` (recommended), `sonnet`, `opus`, `haiku`
 
 ## Analysis-to-Agent Mapping
 
@@ -101,17 +123,17 @@ Generate domain agents for:
 
 ## Color Palette for Agent Types
 
-Use consistent colors by agent type:
+Use consistent named colors by agent type (only these values are valid):
 
-| Agent Type | Color | Hex |
-|------------|-------|-----|
-| Tech-Stack | Blue | `#3B82F6` |
-| Architecture | Purple | `#8B5CF6` |
-| Domain/Business | Green | `#10B981` |
-| Testing | Orange | `#F59E0B` |
-| DevOps/Infra | Red | `#EF4444` |
-| Security | Pink | `#EC4899` |
-| Performance | Cyan | `#06B6D4` |
+| Agent Type | Named Color |
+|------------|-------------|
+| Tech-Stack | `blue` |
+| Architecture | `magenta` |
+| Domain/Business | `green` |
+| Testing | `yellow` |
+| DevOps/Infra | `red` |
+| Security | `magenta` |
+| Performance | `cyan` |
 
 ## Writing Effective System Prompts
 
@@ -146,62 +168,126 @@ Use consistent colors by agent type:
 
 ### Include Project-Specific Knowledge
 
-Always embed actual project details:
+Always embed actual project details in the **markdown body** (after the closing `---`), not inside the frontmatter:
 
 ```markdown
-systemPrompt: |
-  You are an expert on the **Acme Dashboard** React application.
+---
+name: acme-dashboard-react-expert
+description: Use this agent when... Examples:
 
-  ## Project Overview
-  This is a Next.js 14 application using the App Router. The codebase uses:
-  - TypeScript with strict mode
-  - Tailwind CSS for styling
-  - React Query for server state
-  - Zustand for client state
+<example>
+...
+</example>
 
-  ## Key Directories
-  - `src/app/` - Next.js app router pages
-  - `src/components/` - Reusable UI components
-  - `src/hooks/` - Custom React hooks
-  - `src/lib/` - Utility functions and API clients
+model: inherit
+color: blue
+---
 
-  ## Conventions
-  - Components use PascalCase: `UserProfile.tsx`
-  - Hooks use camelCase with 'use' prefix: `useAuth.ts`
-  - API routes follow REST conventions
-  - All components have co-located test files
+You are an expert on the **Acme Dashboard** React application.
+
+## Project Overview
+This is a Next.js 14 application using the App Router. The codebase uses:
+- TypeScript with strict mode
+- Tailwind CSS for styling
+- React Query for server state
+- Zustand for client state
+
+## Key Directories
+- `src/app/` - Next.js app router pages
+- `src/components/` - Reusable UI components
+- `src/hooks/` - Custom React hooks
+- `src/lib/` - Utility functions and API clients
+
+## Conventions
+- Components use PascalCase: `UserProfile.tsx`
+- Hooks use camelCase with 'use' prefix: `useAuth.ts`
+- API routes follow REST conventions
+- All components have co-located test files
 ```
 
-## Example Triggers by Agent Type
+## Example Descriptions by Agent Type
 
-### Tech-Stack Expert Triggers
+The `description:` field controls when Claude triggers an agent. It must include `<example>` blocks.
+
+### Tech-Stack Expert Description
 
 ```yaml
-whenToUse: |
-  This agent should be used when the user asks about "React patterns in this project",
+description: Use this agent when the user asks about "React patterns in this project",
   "how hooks are used here", "component architecture", "state management approach",
   "Next.js configuration", "TypeScript types", or needs help with frontend implementation
-  following project conventions.
+  following project conventions. Examples:
+
+<example>
+Context: User wants to create a React component following project patterns
+user: "How do I create a new component in this project?"
+assistant: "I'll use the acme-react-expert agent to show you the component patterns."
+<commentary>
+Framework-specific implementation questions trigger the tech-stack expert.
+</commentary>
+</example>
+
+<example>
+Context: User needs help with state management
+user: "How does state management work in this app?"
+assistant: "Let me use the acme-react-expert agent to explain the state management approach."
+<commentary>
+State management is a tech-stack concern handled by this agent.
+</commentary>
+</example>
 ```
 
-### Architecture Expert Triggers
+### Architecture Expert Description
 
 ```yaml
-whenToUse: |
-  This agent should be used when the user asks "where should I put this code",
+description: Use this agent when the user asks "where should I put this code",
   "how is the project organized", "what's the module structure", "how do imports work",
   "project conventions", "directory layout", or needs guidance on code organization
-  and architectural decisions.
+  and architectural decisions. Examples:
+
+<example>
+Context: User is creating a new feature and needs placement guidance
+user: "Where should I put this new feature?"
+assistant: "I'll use the acme-architecture-expert agent to guide you on the correct location."
+<commentary>
+Code placement decisions require the architecture expert.
+</commentary>
+</example>
+
+<example>
+Context: User wants to understand project organization
+user: "How is the project organized?"
+assistant: "Let me use the acme-architecture-expert agent to explain the project structure."
+<commentary>
+Project structure questions are the architecture expert's domain.
+</commentary>
+</example>
 ```
 
-### Domain Expert Triggers
+### Domain Expert Description
 
 ```yaml
-whenToUse: |
-  This agent should be used when the user asks about "user authentication flow",
+description: Use this agent when the user asks about "user authentication flow",
   "how orders are processed", "data model relationships", "API endpoint structure",
   "business rules for [feature]", or needs understanding of domain-specific logic
-  and data flows.
+  and data flows. Examples:
+
+<example>
+Context: User wants to understand a business process
+user: "How does the order fulfillment process work?"
+assistant: "I'll use the acme-domain-expert agent to explain the business flow."
+<commentary>
+Business process questions require domain expertise.
+</commentary>
+</example>
+
+<example>
+Context: User needs to understand data model relationships
+user: "What's the relationship between users and subscriptions?"
+assistant: "Let me use the acme-domain-expert agent to explain the entity relationships."
+<commentary>
+Entity relationship questions are core domain expertise.
+</commentary>
+</example>
 ```
 
 ## Dynamic Team Sizing
