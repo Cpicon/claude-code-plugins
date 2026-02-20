@@ -203,12 +203,51 @@ sequenceDiagram
 
 ---
 
-## Updating
+## Updating Plugins
 
-To get the latest version of plugins:
+All updates are managed directly from Claude Code using `/plugin` commands -- no GitHub access or manual downloads needed.
 
-```bash
+### Quick Update (One Command)
+
+Pull the latest version of all marketplace plugins:
+
+```
 /plugin marketplace update
+```
+
+Restart Claude Code after updating to load the new version.
+
+### Enable Auto-Updates (Recommended)
+
+Third-party marketplaces require opt-in for automatic updates. Enable it once and new versions are applied every time you restart Claude Code:
+
+```
+/plugin marketplace edit cpicon-claude-plugins
+```
+
+When prompted, set **auto-update** to `enabled`.
+
+### Reinstalling a Plugin
+
+If a plugin gets into a bad state or you want a clean install, uninstall and reinstall it:
+
+```
+/plugin uninstall agent-team-creator
+/plugin install agent-team-creator
+```
+
+### Verifying Your Setup
+
+Check which plugins are installed and their current status:
+
+```
+/plugin list
+```
+
+Check which marketplaces are configured:
+
+```
+/plugin marketplace list
 ```
 
 ---
