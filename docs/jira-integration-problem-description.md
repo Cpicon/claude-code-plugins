@@ -2,8 +2,8 @@
 
 > **File**: `jira-integration-problem-description.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-04
-> **Status**: In Progress - Ready for Command Implementation
+> **Updated**: 2026-02-24
+> **Status**: Implemented — v1 (create) and v2 (update/feedback loop) complete
 > **Related**: `jira-integration-roadmap.md` (authoritative implementation details)
 > **Author**: Christian Picon Calderon
 
@@ -21,7 +21,8 @@ The `agent-team-creator` plugin is a Claude Code plugin that automatically gener
 |-----------|--------|-------------|
 | `/generate-agent-team` | ✅ Complete | Analyzes codebase, creates specialized agents |
 | `/generate-debugger` | ✅ Complete | Creates orchestrating debugger agent |
-| `/generate-jira-task` | 🔧 In Development | Converts debugging reports to Jira tasks |
+| `/generate-jira-task` | ✅ Complete | Converts debugging reports to Jira tasks (create + update) |
+| `/update-generated-report` | ✅ Complete | Pulls Jira feedback into local reports |
 | `team-architect` agent | ✅ Complete | Orchestrates analysis and agent generation |
 | `implementation-planner` agent | ✅ Created | Designs implementation plans from debugging reports |
 | `jira-writer` agent | ✅ Updated | Formats content for Jira (with debugging context) |
@@ -36,7 +37,8 @@ agent-team-creator/
 ├── commands/
 │   ├── generate-agent-team.md   # ✅ Command: Create project agents
 │   ├── generate-debugger.md     # ✅ Command: Create debugger agent
-│   └── generate-jira-task.md    # 🔧 IN PROGRESS: Create Jira tasks
+│   ├── generate-jira-task.md    # ✅ Command: Create/update Jira tasks
+│   └── update-generated-report.md # ✅ Command: Pull Jira feedback into reports
 ├── agents/
 │   ├── team-architect.md        # ✅ Agent: Orchestrates team creation
 │   ├── implementation-planner.md # ✅ Agent: Designs fix approaches (CREATED)
@@ -428,7 +430,7 @@ The command expects the structured report from `/generate-debugger`, saved to `.
 
 ### The Solution
 
-> Add `/generate-jira-task` command that reads debugging reports, designs implementation plans, and creates structured Jira tasks—completing the automation pipeline from bug discovery to actionable work item.
+> `/generate-jira-task` creates Jira tasks from debugging reports and writes the Jira key back to the report. `/update-generated-report` pulls Jira comments and specialist analysis back into reports. Together they form a bidirectional feedback loop between local debugging and Jira tracking.
 
 ### How It Fits
 
@@ -446,7 +448,18 @@ The command expects the structured report from `/generate-debugger`, saved to `.
 │  [Debugging happens] ──────→ Debugging Report                  │
 │          │                                                      │
 │          ↓                                                      │
-│  /generate-jira-task ──────→ Jira Task (🔧 IN DEVELOPMENT)     │
+│  /generate-jira-task ──────→ Jira Task (create or update)      │
+│          │                      │                               │
+│          ↓                      ↓                               │
+│  jira_key written back    Engineers comment                     │
+│          │                      │                               │
+│          ↓                      ↓                               │
+│  /update-generated-report ←─── Fetch comments                  │
+│          │                                                      │
+│          ↓                                                      │
+│  Report updated with Timeline History                          │
+│          │                                                      │
+│          └──→ /generate-jira-task (update mode) ──→ Jira       │
 │                                                                 │
 └────────────────────────────────────────────────────────────────┘
 ```

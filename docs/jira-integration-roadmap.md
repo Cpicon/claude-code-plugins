@@ -2,8 +2,8 @@
 
 > **File**: `jira-integration-roadmap.md`
 > **Created**: 2026-01-03
-> **Updated**: 2026-01-04 (Session 6: HIGH/MEDIUM Priority Analysis)
-> **Status**: In Progress - Ready for Command Implementation
+> **Updated**: 2026-02-24 (v2: Bidirectional Jira integration)
+> **Status**: Implemented — v1 complete, v2 (update mode + feedback loop) complete
 > **Plugin**: `agent-team-creator`
 > **Author**: Christian Picon Calderon
 
@@ -69,11 +69,22 @@ This separation follows industry best practices and avoids known Claude Code lim
                         Command orchestrates:
                         • Phase 0: Check MCP availability
                         • Phase 1: Project resolution (MCP) [SKIP in fallback]
-                        • Phase 2: Load debugging report (File Read)
-                        • Phase 3: Duplicate check (MCP) [SKIP in fallback]
+                        • Phase 2: Load report + detect update mode (YAML frontmatter)
+                        • Phase 3: Duplicate check (MCP) [SKIP in fallback or update mode]
                         • Phase 4: implementation-planner (agent)
                         • Phase 5: jira-writer (agent)
-                        • Phase 6: Create issue (MCP) or markdown (fallback)
+                        • Phase 6: Create/update issue (MCP) or markdown (fallback)
+                              ↓
+                        Writes jira_key back to report (bidirectional link)
+                              ↓
+                        /update-generated-report PROJ-123  (feedback loop)
+                              ↓
+                        • Phase 0: Parse input (Jira key, report path, or interactive)
+                        • Phase 1: Fetch Jira comments + find linked report
+                        • Phase 2: Collect optional user feedback
+                        • Phase 3: Consult specialist agents
+                        • Phase 4: Append Timeline History to report
+                        • Phase 5: Guide next steps
 ```
 
 ### Report Storage Structure
@@ -83,13 +94,32 @@ Reports are stored in a generic, plugin-agnostic location for reuse by other too
 ```
 .claude/
 ├── agents/                  # Project-specific agents
-├── reports/                 # Generated reports (NEW)
+├── reports/
 │   ├── debugging/           # Debugging investigation reports
-│   │   └── report-2026-01-03-1530.md
-│   └── jira-drafts/         # Fallback Jira drafts (when MCP unavailable)
-│       └── draft-2026-01-03-1545.md
+│   │   ├── report-2026-01-03-1530.md           # New report (no Jira link)
+│   │   └── report-PROJ-123-20260210-1000.md    # Jira-linked report
+│   └── jira-drafts/         # Fallback drafts (when MCP unavailable)
+│       ├── draft-2026-01-03-1545.md            # New issue draft
+│       └── update-PROJ-123-20260210-1100.md    # Update draft
+├── jira-project.json        # Cached Jira project config
 └── CLAUDE.md
 ```
+
+### Report YAML Frontmatter
+
+Reports linked to Jira issues include frontmatter for bidirectional tracking:
+
+```yaml
+---
+jira_key: PROJ-123
+jira_url: https://site.atlassian.net/browse/PROJ-123
+created: 2026-02-10 10:00
+last_updated: 2026-02-12 14:30
+last_synced: 2026-02-12 14:30
+---
+```
+
+Frontmatter is added automatically when `/generate-jira-task` creates a new issue and is preserved across updates.
 
 ### Debugging Report Pipeline
 
@@ -208,42 +238,50 @@ All agents are **bundled in the plugin** (not global agents):
 
 ```
 agent-team-creator/agents/
-├── team-architect.md           # Original - orchestrates team creation
-├── implementation-planner.md   # CREATED - designs fix approaches (no MCP)
-├── jira-writer.md              # UPDATED - formats Jira content with debugging context (no MCP)
-└── context-summarizer.md       # RESERVED - for future Jira context analysis
+├── team-architect.md           # Orchestrates team creation
+├── implementation-planner.md   # Designs fix approaches (no MCP)
+├── jira-writer.md              # Formats Jira content with debugging context (no MCP)
+└── context-summarizer.md       # Jira context analysis
 ```
 
-### Agent Roles in This Feature
+### Agent Roles
 
-| Agent | Purpose | MCP Needed? | Status |
-|-------|---------|-------------|--------|
-| `implementation-planner` | Analyze debugging report, design implementation steps | No | CREATED |
-| `jira-writer` | Format content into Jira-compatible structure (with debugging context support) | No | UPDATED |
-| `context-summarizer` | Reserved for future Jira context analysis | No | NOT USED (v1) |
+| Agent | Purpose | MCP Needed? | Used By |
+|-------|---------|-------------|---------|
+| `implementation-planner` | Analyze debugging report, design implementation steps | No | `/generate-jira-task` Phase 4 |
+| `jira-writer` | Format content into Jira-compatible structure | No | `/generate-jira-task` Phases 5-6 |
+| `context-summarizer` | Analyze Jira work items for context | No | `/update-generated-report` (future) |
 
 ---
 
-## Future Work: Enhancements for v2
+## Implemented in v2 (2026-02-24)
 
-These capabilities are planned for future versions but not included in v1:
+### Bidirectional Report-Jira Linking
+- **Reports linked to Jira via YAML frontmatter** (`jira_key`, `jira_url`)
+- **`/generate-jira-task` update mode**: Detects frontmatter, posts changes as Jira comments instead of creating duplicates
+- **`/update-generated-report` command**: Fetches Jira comments, consults specialists, appends Timeline History sessions
+- **Content separation**: Jira description stays static after creation; updates go as comments only
 
-### Duplicate Detection Enhancement (v2)
+### MCP Tools Added
+- `getJiraIssue(cloudId, issueIdOrKey)` — fetch issue data including comments
+- `addCommentToJiraIssue(cloudId, issueIdOrKey, commentBody)` — post updates as comments
+- `editJiraIssue` — confirmed NOT available in Atlassian MCP plugin
+
+---
+
+## Future Work: Enhancements for v3
+
+### Duplicate Detection Enhancement
 - **Current**: Command-level JQL search with basic keyword matching
 - **Future**: Semantic similarity analysis using agent intelligence
-- **Approach**: After Phase 3 JQL search, invoke an analysis agent to score similarity
-- **Benefit**: Reduce false positives, better duplicate matching
 
-### Context Summarization (v2)
-- **Current**: Not implemented
+### Context Summarization
+- **Current**: `context-summarizer` agent exists but not invoked automatically
 - **Future**: Before creating a task, fetch related Jira issues and summarize context
-- **Approach**: Command fetches issues via MCP, `context-summarizer` agent analyzes relationships
-- **Benefit**: Prevent duplicate work, understand related tasks, link issues appropriately
 
-### Cache Management (v2)
+### Cache Management
 - **Current**: Once configured, project key is cached permanently in `.claude/jira-project.json`
 - **Future**: Add cache invalidation triggers and manual project switching capability
-- **Rationale**: Project/cloud IDs rarely change during development; complexity deferred to v2
 
 ---
 
@@ -380,6 +418,11 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - **Impact Assessment** → Risk level, affected components
    - **Solutions** → Implementation guidance
 
+4. **Detect update mode** (v2):
+   - Parse YAML frontmatter for `jira_key` field
+   - If present: `UPDATE_MODE = true`, skip Phase 3
+   - If absent: `UPDATE_MODE = false`, continue normally
+
 ### Phase 3: Duplicate Check (COMMAND - MCP)
 
 > **⚠️ SKIP if FALLBACK_MODE**: This phase requires MCP. In fallback mode, skip directly to Phase 4.
@@ -502,7 +545,18 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    - Labels may be formatted as `[label1, label2]` or `label1, label2`
    - Trim whitespace from all extracted values
 
-### Phase 6: Create Jira Issue (COMMAND - MCP)
+### Phase 6: Output Generation (COMMAND - MCP)
+
+Phase 6 has four paths based on `UPDATE_MODE` and `FALLBACK_MODE`:
+
+| UPDATE_MODE | FALLBACK_MODE | Action |
+|-------------|---------------|--------|
+| true | false | Post update as Jira comment via `addCommentToJiraIssue` |
+| true | true | Save update draft to `.claude/reports/jira-drafts/update-{KEY}-{timestamp}.md` |
+| false | true | Save creation draft to `.claude/reports/jira-drafts/draft-{timestamp}.md` |
+| false | false | Create new Jira issue + write `jira_key` frontmatter back to report |
+
+#### Create Path (UPDATE_MODE = false)
 
 1. **If FALLBACK_MODE**:
    - Create `.claude/reports/jira-drafts/` directory if needed
@@ -562,7 +616,12 @@ Location: `.claude/jira-project.json` (in target project, not plugin)
    | 404 Project Not Found | Clear cache, re-run project resolution |
    | Network Error | Retry once, then fall back to markdown |
 
-3. **Return result**:
+3. **Write Jira link back to report** (v2):
+   - Use Edit tool to add/update YAML frontmatter in the source report
+   - Set `jira_key`, `jira_url`, `last_synced`
+   - Establishes the bidirectional link for future update mode detection
+
+4. **Return result**:
    - Display Jira issue key (e.g., PROJ-123)
    - Display issue URL
    - Confirm successful creation
@@ -716,27 +775,22 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 ---
 
-## Implementation Order
+## Implementation Status
 
-### Sprint 1: MVP Command (Markdown Only)
-1. [ ] Create `generate-jira-task.md` command with full phase logic
-2. [ ] Implement Phase 0: Prerequisite check with fallback mode
-3. [ ] Implement Phase 2: Load and validate debugging report
-4. [ ] Implement Phase 4: Invoke implementation-planner agent
-5. [ ] Implement Phase 5: Invoke jira-writer agent (includes label handling)
-6. [ ] Test end-to-end markdown generation (fallback mode)
+### v1: Core Pipeline (Complete)
+1. [x] Create `generate-jira-task.md` command with full phase logic
+2. [x] Implement Phases 0-6 with MCP and fallback modes
+3. [x] Create `implementation-planner` and update `jira-writer` agents
+4. [x] End-to-end testing with real Jira
 
-### Sprint 2: Jira Integration
-7. [ ] Implement Phase 1: Project resolution with caching
-8. [ ] Implement Phase 3: Duplicate check via MCP
-9. [ ] Implement Phase 6: Create Jira issue via MCP
-10. [ ] Test end-to-end with real Jira
-
-### Sprint 3: Polish
-11. [ ] Refine issue type inference keywords
-12. [ ] Update plugin README documentation
-13. [ ] Update marketplace README
-14. [ ] End-to-end testing with edge cases
+### v2: Bidirectional Integration (Complete — 2026-02-24)
+5. [x] Add update mode detection in Phase 2 (YAML frontmatter)
+6. [x] Add "Update existing" option in Phase 3 duplicate check
+7. [x] Add update path in Phase 6 (`addCommentToJiraIssue`)
+8. [x] Add Jira link write-back after issue creation
+9. [x] Create `/update-generated-report` command (Phases 0-5)
+10. [x] Update `/generate-debugger` template with frontmatter support
+11. [x] Update README and documentation
 
 ---
 
@@ -768,6 +822,6 @@ Follow phases 0-6 as defined in the roadmap. Key points:
 
 ## Next Steps
 
-1. **Create `generate-jira-task.md` command** - MVP with fallback mode
-2. **Test implementation-planner** with sample debugging reports
-3. **Test end-to-end** - Validate the hybrid architecture works
+1. **Manual end-to-end testing** of the full feedback loop (debug → create → comment → update → sync)
+2. **Invoke `context-summarizer`** in `/update-generated-report` Phase 3 for richer context
+3. **Semantic duplicate detection** in Phase 3 using agent intelligence

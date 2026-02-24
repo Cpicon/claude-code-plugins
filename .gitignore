@@ -25,6 +25,13 @@ dist/
 build/
 *.egg
 
+# Internal analysis docs
+docs/jira-integration-analysis/
+
+# Generated reports and drafts
+**/reports/debugging/
+**/reports/jira-drafts/
+
 # Environment
 .env
 .env.local

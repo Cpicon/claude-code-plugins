@@ -37,7 +37,8 @@ This marketplace provides plugins that augment Claude Code throughout the softwa
 | **Analyze** | `/generate-agent-team` - Create domain experts | Code metrics, dependency analysis |
 | **Debug** | `/generate-debugger` - Orchestrated investigation | Performance profiling, log analysis |
 | **Plan** | Implementation planning agents | Sprint planning, estimation |
-| **Track** | `/generate-jira-task` - Issue creation | Multi-tracker support, status sync |
+| **Track** | `/generate-jira-task` - Issue creation & updates | Multi-tracker support, status sync |
+| **Sync** | `/update-generated-report` - Jira feedback loop | Bidirectional sync |
 | **Review** | Debugging reports with solutions | PR review, code quality gates |
 
 ---
@@ -54,6 +55,7 @@ flowchart TD
         CMD1["/generate-agent-team"]
         CMD2["/generate-debugger"]
         CMD3["/generate-jira-task"]
+        CMD4["/update-generated-report"]
     end
 
     subgraph "Generated Artifacts"
@@ -72,6 +74,8 @@ flowchart TD
     A2 -.-> P2
     CMD3 --> A3
     P2 -.-> CMD3
+    CMD4 -.-> P2
+    A3 -.-> CMD4
 ```
 
 **Features:**
@@ -102,12 +106,21 @@ Generate a project-specific debugger agent that:
 - **Saves reports** to `.claude/reports/debugging/` for downstream processing
 
 #### `/generate-jira-task`
-Transform debugging reports into well-structured Jira tasks:
+Transform debugging reports into well-structured Jira tasks, or update existing ones:
 - Reads debugging reports from `.claude/reports/debugging/`
-- Invokes `implementation-planner` agent for fix design
-- Invokes `jira-writer` agent for Jira formatting
-- Creates issues via Atlassian MCP (or markdown fallback)
-- Includes: summary, description, acceptance criteria, labels
+- Detects YAML frontmatter with `jira_key` to enter **update mode** automatically
+- In update mode: posts new findings as a Jira comment (not a new issue)
+- In create mode: creates a new Jira issue and writes `jira_key` back to the report
+- Invokes `implementation-planner` and `jira-writer` agents
+- Falls back to markdown draft when Atlassian MCP is unavailable
+
+#### `/update-generated-report`
+Pull Jira feedback into local debugging reports:
+- Accepts a Jira key (`PROJ-123`), report path, or runs interactively
+- Fetches Jira issue comments via Atlassian MCP
+- Consults project specialist agents with the new feedback
+- Appends a **Timeline History** session to the report
+- Does NOT push to Jira — run `/generate-jira-task` afterward to sync back
 
 ```mermaid
 flowchart LR
@@ -116,6 +129,8 @@ flowchart LR
     C --> D{"MCP Available?"}
     D -->|Yes| E["Jira Issue Created"]
     D -->|No| F["Markdown Draft"]
+    E -->|"Engineer comments"| G["/update-generated-report"]
+    G -->|"Updates report"| B
 ```
 
 **Core Debugger Rules:**
@@ -170,6 +185,9 @@ Navigate to any project directory and run:
 
 # Create Jira task from debugging report
 /generate-jira-task
+
+# Pull Jira feedback into a report
+/update-generated-report PROJ-123
 ```
 
 ---
@@ -197,7 +215,19 @@ sequenceDiagram
         C->>A: Orchestrate investigation
         A-->>C: Debugging report saved
         U->>C: /generate-jira-task
-        C->>J: Create issue (or markdown)
+        C->>J: Create issue PROJ-123
+        J-->>C: jira_key written to report
+    end
+
+    rect rgb(240, 255, 240)
+        Note over U,J: Feedback Loop (repeatable)
+        Note over J: Engineer adds comments
+        U->>C: /update-generated-report PROJ-123
+        C->>J: Fetch comments
+        C->>A: Consult specialists
+        C-->>C: Append Timeline History
+        U->>C: /generate-jira-task report-path
+        C->>J: Post update as comment
     end
 ```
 
