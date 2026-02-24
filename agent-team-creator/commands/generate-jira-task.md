@@ -192,6 +192,23 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
 
    Keep the full report text for use in Phase 4.
 
+6. **Detect update mode**
+
+   Check if the report content starts with YAML frontmatter (`---` delimiter):
+   - If the report begins with `---`, parse the YAML block between the first and second `---` delimiters
+   - Look for a `jira_key` field in the parsed frontmatter
+
+   **If `jira_key` is present and non-empty:**
+   - Set `UPDATE_MODE = true`
+   - Store the value as `EXISTING_JIRA_KEY`
+   - Extract `jira_url` if present, store as `EXISTING_JIRA_URL`
+   - Notify user: "This report is linked to Jira issue {EXISTING_JIRA_KEY}. Will update existing issue instead of creating a new one."
+   - **Skip Phase 3 entirely** — proceed directly to Phase 4
+
+   **If no frontmatter or no `jira_key`:**
+   - Set `UPDATE_MODE = false`
+   - Continue to Phase 3 as normal
+
 ---
 
 ### Phase 3: Duplicate Check
