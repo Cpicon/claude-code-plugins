@@ -6,6 +6,7 @@ allowed-tools:
   - Write
   - Glob
   - Grep
+  - Edit
   - Task
   - AskUserQuestion
   - mcp__plugin_atlassian_atlassian__getVisibleJiraProjects
@@ -14,6 +15,8 @@ allowed-tools:
   - mcp__plugin_atlassian_atlassian__searchJiraIssuesUsingJql
   - mcp__plugin_atlassian_atlassian__getJiraProjectIssueTypesMetadata
   - mcp__plugin_atlassian_atlassian__atlassianUserInfo
+  - mcp__plugin_atlassian_atlassian__getJiraIssue
+  - mcp__plugin_atlassian_atlassian__addCommentToJiraIssue
 argument-hint: "[debugging-report-path]"
 ---
 
