@@ -34,10 +34,17 @@ flowchart LR
 
     subgraph "Jira Integration"
         F["generate-jira-task"]
-        G["Jira Draft"]
+        G["Jira Issue / Draft"]
+    end
+
+    subgraph "Feedback Loop"
+        H["Engineer comments on Jira"]
+        I["update-generated-report"]
+        J["generate-jira-task (update)"]
     end
 
     A --> B --> C --> D --> E --> F --> G
+    G --> H --> I --> J --> G
 ```
 
 ---
@@ -266,6 +273,192 @@ flowchart TD
 
 ---
 
+### Phase 6: Bidirectional Jira Feedback Loop
+
+This phase tests the v2 features: update mode, YAML frontmatter linking, Jira comment sync, and the `/update-generated-report` command.
+
+> **Prerequisites**: Atlassian MCP plugin must be configured and authenticated. A Jira project accessible to the authenticated user must exist.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Claude Code
+    participant R as Report File
+    participant J as Jira
+
+    rect rgb(240, 248, 255)
+        Note over U,J: Step 1: Create Jira Issue
+        U->>C: /generate-jira-task
+        C->>J: createJiraIssue
+        J-->>C: PROJ-123
+        C->>R: Write jira_key frontmatter
+    end
+
+    rect rgb(255, 248, 240)
+        Note over U,J: Step 2: Verify Frontmatter Write-Back
+        U->>C: "Check the report"
+        C->>R: Read report
+        C-->>U: Confirm jira_key, jira_url present
+    end
+
+    rect rgb(240, 255, 240)
+        Note over U,J: Step 3: Add Comment to Jira
+        U->>J: Add engineer comment (manual or via MCP)
+    end
+
+    rect rgb(255, 240, 255)
+        Note over U,J: Step 4: Pull Feedback
+        U->>C: /update-generated-report PROJ-123
+        C->>J: getJiraIssue (fetch comments)
+        C->>C: Consult specialist agents
+        C->>R: Append Timeline History
+    end
+
+    rect rgb(255, 255, 240)
+        Note over U,J: Step 5: Sync Back to Jira
+        U->>C: /generate-jira-task report-path
+        C->>R: Detect jira_key (UPDATE_MODE)
+        C->>J: addCommentToJiraIssue
+    end
+```
+
+#### Step 1: Create Jira Issue from Report
+
+**User runs**:
+```
+/agent-team-creator:generate-jira-task
+```
+
+**LLM performs**:
+- Loads most recent debugging report
+- Detects no `jira_key` frontmatter → `UPDATE_MODE = false`
+- Runs implementation-planner and jira-writer agents
+- Creates Jira issue via `createJiraIssue`
+- **Writes YAML frontmatter back to source report** with `jira_key`, `jira_url`, `last_synced`
+
+**User verification request**:
+> "Check if the report was updated with frontmatter"
+
+**LLM checks**:
+- Reads the source report file
+- Verifies YAML frontmatter exists at the top of the file:
+  ```yaml
+  ---
+  jira_key: PDE-XX
+  jira_url: https://site.atlassian.net/browse/PDE-XX
+  last_synced: YYYY-MM-DD...
+  ---
+  ```
+- Verifies the rest of the report content is unchanged
+- Confirms the Jira issue exists and has the correct summary/description
+
+#### Step 2: Add Comment to Jira Issue
+
+This simulates an engineer reviewing the Jira task and adding feedback.
+
+**Manual method**: Add a comment directly in Jira UI.
+
+**Programmatic method** (using MCP in a command context):
+```
+Call addCommentToJiraIssue with:
+  cloudId: [from .claude/jira-project.json]
+  issueIdOrKey: PDE-XX
+  commentBody: "After reviewing the code, I believe the proper fix (Solution 2) is the right approach. The comprehensive fix would require too much refactoring for this sprint. Also, we should check if the soft delete bug on line 169 needs a separate ticket."
+```
+
+**Verification**: Check the Jira issue in the browser to confirm the comment appears.
+
+#### Step 3: Pull Jira Feedback into Report
+
+**User runs**:
+```
+/agent-team-creator:update-generated-report PDE-XX
+```
+
+**LLM performs**:
+- Detects Jira Key Mode (`PDE-XX` matches regex)
+- Calls `getJiraIssue` to fetch issue data and comments
+- Finds linked local report via glob/grep for `jira_key: PDE-XX`
+- Displays context summary to user
+- Asks if user wants to add observations
+- Discovers and consults relevant specialist agents
+- Constructs Timeline History session
+- Appends Timeline History to report
+- Updates `last_updated` in frontmatter
+
+**User verification request**:
+> "Check the updated report"
+
+**LLM checks**:
+- Report now has a `## Timeline History` section at the end
+- Timeline session includes:
+  - Jira comment summary with author and date
+  - Specialist analysis table
+  - Impact on diagnosis assessment
+- Frontmatter `last_updated` is refreshed
+- Original report content is unchanged (appended, not replaced)
+
+#### Step 4: Sync Updated Report Back to Jira
+
+**User runs**:
+```
+/agent-team-creator:generate-jira-task .claude/reports/debugging/report-2026-02-19-2100.md
+```
+
+**LLM performs**:
+- Loads report, detects `jira_key: PDE-XX` in frontmatter
+- Sets `UPDATE_MODE = true`
+- Notifies user: "This report is linked to PDE-XX. Will update existing issue."
+- **Skips Phase 3** (duplicate check)
+- Runs implementation-planner and jira-writer (for the update content)
+- Posts update as a **Jira comment** via `addCommentToJiraIssue` (NOT a new issue)
+- Updates `last_synced` in frontmatter
+
+**User verification request**:
+> "Check the Jira issue for the update comment"
+
+**LLM checks**:
+- No new Jira issue was created (issue count unchanged)
+- The existing issue `PDE-XX` has a new comment with the Timeline History findings
+- The comment contains only the latest changes (not the full report)
+- Report frontmatter `last_synced` was updated
+
+#### Step 5: Verify Backward Compatibility
+
+Test that old reports without frontmatter still work normally.
+
+**User runs**:
+```
+/agent-team-creator:generate-jira-task .claude/reports/debugging/report-2026-01-04-1430.md
+```
+
+**LLM performs**:
+- Loads report, detects no YAML frontmatter
+- Sets `UPDATE_MODE = false`
+- Runs Phase 3 (duplicate check) normally
+- Creates a new Jira issue
+- **Writes frontmatter back** to the old report (upgrades it)
+
+**User verification**:
+- Old report now has `jira_key` frontmatter
+- A new Jira issue was created (not an update)
+
+#### Verification Checklist
+
+| Check | Expected |
+|-------|----------|
+| Report has `jira_key` frontmatter after first `/generate-jira-task` | YAML block at top of file |
+| `/update-generated-report PDE-XX` finds linked report | Report located via glob or grep |
+| Timeline History appended (not replacing content) | Original sections intact |
+| `/generate-jira-task` on linked report enters update mode | "Will update existing issue" message |
+| Update posts as comment, not new issue | Issue count unchanged |
+| Comment contains only new findings | Not the full report |
+| Old reports without frontmatter create new issues | Normal create flow |
+| Old reports get frontmatter after first Jira link | Upgraded automatically |
+| Fallback mode works when MCP unavailable | Drafts saved to `jira-drafts/` |
+
+---
+
 ## Plugin Development Relationship
 
 ```mermaid
@@ -394,9 +587,10 @@ docs/
     ├── requirements.txt      # Dependencies
     └── .claude/
         ├── agents/           # Generated agents
+        ├── jira-project.json # Cached Jira project config (after first run)
         └── reports/
-            ├── debugging/    # Debug reports
-            └── jira-drafts/  # Jira drafts
+            ├── debugging/    # Debug reports (with optional YAML frontmatter)
+            └── jira-drafts/  # Jira drafts and update drafts (fallback mode)
 ```
 
 ---
@@ -407,4 +601,5 @@ docs/
 |---------|---------|
 | `/agent-team-creator:generate-agent-team` | Create specialist agents for codebase |
 | `/agent-team-creator:generate-debugger` | Create debugging orchestrator |
-| `/agent-team-creator:generate-jira-task` | Convert debug report to Jira task |
+| `/agent-team-creator:generate-jira-task` | Create or update Jira task from debug report |
+| `/agent-team-creator:update-generated-report` | Pull Jira feedback into local report |
