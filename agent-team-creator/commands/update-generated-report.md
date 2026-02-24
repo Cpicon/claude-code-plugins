@@ -130,6 +130,22 @@ Execute phases 0-5 in order.
    - Set `JIRA_COMMENTS = []`
    - Note: "No comments found on {INPUT_JIRA_KEY}. Will proceed with description only."
 
+#### If JIRA_MODE = "REST" and INPUT_JIRA_KEY is set
+
+1. **Fetch Jira issue via REST**
+
+   Bash: `python3 {SCRIPT_PATH} --action get-issue --config .claude/jira-rest-config.json --issue-key {INPUT_JIRA_KEY}`
+
+   Parse stdout JSON and store:
+   - `JIRA_SUMMARY` = `response.summary`
+   - `JIRA_DESCRIPTION` = `response.description`
+   - `JIRA_STATUS` = `response.status`
+   - `JIRA_COMMENTS` = `response.comments` (array of `{author, created, body}`)
+
+   If exit code != 0:
+   - Warn: "Failed to fetch issue via REST. Proceeding with local data only."
+   - Set `JIRA_COMMENTS = []`
+
 2. **Find linked local report**
 
    Search for a local report linked to this Jira key:
@@ -153,13 +169,27 @@ Execute phases 0-5 in order.
    - If `jira_key` is present and non-empty: Store as `INPUT_JIRA_KEY`
    - If `jira_url` is present: Store as `EXISTING_JIRA_URL`
 
-3. **Fetch Jira data** (if `INPUT_JIRA_KEY` was extracted and `JIRA_AVAILABLE = true`)
+3. **Fetch Jira data** (if `INPUT_JIRA_KEY` was extracted and `JIRA_MODE != "OFFLINE"`)
 
-   Follow the same `getJiraIssue` call as Jira Key Mode above.
+   If `JIRA_MODE = "MCP"`: Follow the same `getJiraIssue` call as Jira Key Mode above.
 
-   If `JIRA_AVAILABLE = false` or no `jira_key` in frontmatter:
+   If `JIRA_MODE = "REST"` and `INPUT_JIRA_KEY` was extracted from frontmatter:
+   - Fetch issue via REST (same pattern as Jira Key Mode above)
+
+   If `JIRA_MODE = "OFFLINE"` or no `jira_key` in frontmatter:
    - Set `JIRA_COMMENTS = []`
    - Note: "No Jira data available. Proceeding with local report and user feedback only."
+
+**Response normalization**: After fetching Jira data via either MCP or REST, the following
+variables must be populated identically regardless of source:
+- `JIRA_SUMMARY` — string
+- `JIRA_DESCRIPTION` — string
+- `JIRA_STATUS` — string
+- `JIRA_COMMENTS` — array of `{author: string, created: string, body: string}`
+
+MCP returns nested structures (`fields.summary`, `fields.comment.comments[]`).
+REST script returns flattened structures (`summary`, `comments[]`).
+All downstream phases use the normalized variable names.
 
 ---
 
