@@ -25,6 +25,9 @@ dist/
 build/
 *.egg
 
+# Internal analysis docs
+docs/jira-integration-analysis/
+
 # Environment
 .env
 .env.local
