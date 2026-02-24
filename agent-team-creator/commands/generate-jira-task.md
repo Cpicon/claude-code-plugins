@@ -244,12 +244,17 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
      - For each result: "[KEY]: [Summary] (Status: [Status])"
      - Ask user via AskUserQuestion: "How would you like to proceed?"
      - Options:
+       - For each found issue: "Update {KEY}: {Summary}" (shows as separate option per issue)
        - "Create new task anyway"
-       - "Abort - I'll update an existing issue"
+       - "Abort"
 
 4. **Handle user choice**
 
-   - If "Create new task": Continue to Phase 4
+   - If user selects "Update {KEY}":
+     - Set `UPDATE_MODE = true`
+     - Set `EXISTING_JIRA_KEY = {KEY}` (the key from the selected option)
+     - Continue to Phase 4
+   - If "Create new task": Set `UPDATE_MODE = false`, continue to Phase 4
    - If "Abort": End execution with message
 
 ---
