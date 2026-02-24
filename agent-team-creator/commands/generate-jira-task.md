@@ -7,6 +7,7 @@ allowed-tools:
   - Glob
   - Grep
   - Edit
+  - Bash
   - Task
   - AskUserQuestion
   - mcp__plugin_atlassian_atlassian__getVisibleJiraProjects
