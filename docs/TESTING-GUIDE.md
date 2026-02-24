@@ -459,6 +459,84 @@ Test that old reports without frontmatter still work normally.
 
 ---
 
+## Testing REST API Fallback Mode
+
+### Prerequisites
+
+- Python 3.6+ installed (`python3 --version`)
+- A Jira Cloud instance with API access
+- An API token from https://id.atlassian.com/manage-profile/security/api-tokens
+
+### Setup
+
+Create `.claude/jira-rest-config.json` in the test project:
+
+```json
+{
+  "baseUrl": "https://your-site.atlassian.net",
+  "email": "your-email@company.com",
+  "apiToken": "your-api-token",
+  "configuredAt": "2026-02-24T10:00:00Z"
+}
+```
+
+### Script Standalone Tests
+
+Test each action in isolation before testing through commands:
+
+```bash
+# Verify authentication
+python3 agent-team-creator/scripts/jira_client.py --action verify-auth --config .claude/jira-rest-config.json
+
+# Search projects
+python3 agent-team-creator/scripts/jira_client.py --action get-projects --config .claude/jira-rest-config.json --query "test"
+
+# Fetch an issue
+python3 agent-team-creator/scripts/jira_client.py --action get-issue --config .claude/jira-rest-config.json --issue-key PROJ-1
+```
+
+### Command Integration Test Matrix
+
+| # | Test | JIRA_MODE | How to Trigger | Expected |
+|---|------|-----------|----------------|----------|
+| 1 | Create via MCP | MCP | Normal Atlassian MCP setup | Issue created via MCP |
+| 2 | Create via REST | REST | Uninstall Atlassian MCP plugin, configure REST credentials | Issue created via script |
+| 3 | Create offline | OFFLINE | No MCP, no REST config, decline prompt | Markdown draft in `jira-drafts/` |
+| 4 | Update via MCP | MCP | Run on report with `jira_key` frontmatter | Comment posted via MCP |
+| 5 | Update via REST | REST | Same report, no MCP, with REST config | Comment posted via script |
+| 6 | Update offline | OFFLINE | Same report, no MCP, no REST | Update draft in `jira-drafts/` |
+
+### Cascade Verification
+
+1. Have MCP installed and REST config present
+2. Run `/generate-jira-task` — verify MCP is preferred (should say "Connected to Jira via MCP plugin")
+3. Uninstall MCP, keep REST config
+4. Run `/generate-jira-task` — verify REST activates (should say "Connected to Jira via REST API")
+5. Remove REST config, decline prompt
+6. Run `/generate-jira-task` — verify OFFLINE (should say "Running in offline mode")
+
+### Error Simulation
+
+```bash
+# Invalid credentials (exit 1)
+echo '{"baseUrl":"https://fake.atlassian.net","email":"x","apiToken":"y"}' > .claude/jira-rest-config.json
+python3 agent-team-creator/scripts/jira_client.py --action verify-auth --config .claude/jira-rest-config.json
+
+# Bad project key (exit 4)
+python3 agent-team-creator/scripts/jira_client.py --action get-issue-types --config .claude/jira-rest-config.json --project NONEXISTENT
+
+# Missing payload file (exit 2)
+python3 agent-team-creator/scripts/jira_client.py --action create-issue --config .claude/jira-rest-config.json --payload-file /nonexistent.json
+```
+
+### Security Verification
+
+1. `git status` — verify `.claude/jira-rest-config.json` is not tracked
+2. After command runs — verify `.claude/tmp/` contains no leftover payload files
+3. `ps aux | grep jira` during execution — verify no credentials in process arguments
+
+---
+
 ## Plugin Development Relationship
 
 ```mermaid
