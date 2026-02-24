@@ -42,46 +42,85 @@ This separation avoids the known MCP access bug in plugin-defined agents (GitHub
 
 ## Execution Flow
 
-Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
+Execute phases 0-6 in order. Track `JIRA_MODE` state throughout.
 
 ### Phase 0: Prerequisite Check
 
-**Purpose**: Determine if Atlassian MCP is available and authenticated.
+**Purpose**: Determine the Jira transport mode: MCP, REST, or OFFLINE.
 
-1. **Check Atlassian plugin availability**
+**State variable**: `JIRA_MODE` — one of `"MCP"`, `"REST"`, `"OFFLINE"`
+
+1. **Locate REST script** (for Step 3)
+
+   Use Glob to find `**/agent-team-creator/scripts/jira_client.py`.
+   If not found, try `~/.claude/plugins/agent-team-creator/scripts/jira_client.py`.
+   Store the absolute path as `SCRIPT_PATH`, or `null` if not found.
+
+2. **Step 1: Try Atlassian MCP**
 
    Call `mcp__plugin_atlassian_atlassian__getAccessibleAtlassianResources()`.
 
-   - If the tool call **fails** (tool not found or error):
-     - Set `FALLBACK_MODE = true`
-     - Notify user: "Atlassian MCP plugin not available. Will generate markdown draft for manual Jira creation."
-   - If **succeeds**: Continue to authentication check
-
-2. **Verify Atlassian authentication** (only if plugin available)
+   - If the tool call **succeeds**: Continue to authentication check
+   - If **fails** (tool not found or error): Fall through to Step 3
 
    Call `mcp__plugin_atlassian_atlassian__atlassianUserInfo()`.
 
-   - If **fails** (401/403 or empty response):
-     - Set `FALLBACK_MODE = true`
-     - Notify user: "Not authenticated with Atlassian. Please run `claude mcp auth --server atlassian` to authenticate. Generating markdown draft instead."
-   - If **succeeds**: User is logged in, continue with normal mode
+   - If **succeeds**: Set `JIRA_MODE = "MCP"`. User is logged in. Skip to step 5.
+   - If **fails** (401/403): Fall through to Step 3
 
-3. **Communicate mode to user**
+3. **Step 2: Try REST API** (only if MCP failed)
 
-   - If `FALLBACK_MODE = true`: "Running in fallback mode - will generate markdown draft for manual Jira creation."
-   - If `FALLBACK_MODE = false`: "Connected to Jira. Will create issue directly."
+   If `SCRIPT_PATH` is null: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
 
-**FALLBACK_MODE Effects**:
-- Skip Phase 1 (Project Resolution) - requires MCP
-- Skip Phase 3 (Duplicate Check) - requires MCP
-- Continue Phases 2, 4, 5 - work without MCP
-- Phase 6: Write to markdown file instead of creating Jira issue
+   Check Python availability:
+   Bash: `python3 --version`
+   If fails: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
+
+   Check for cached REST credentials:
+   Use Read tool to check if `.claude/jira-rest-config.json` exists.
+
+   - If **file exists and has `baseUrl`, `email`, `apiToken`**:
+     - Validate credentials:
+       Bash: `python3 {SCRIPT_PATH} --action verify-auth --config .claude/jira-rest-config.json`
+     - If exit 0: Set `JIRA_MODE = "REST"`. Skip to step 5.
+     - If exit 1: Delete stale config file. Fall through to Step 4.
+   - If **file missing or invalid**: Fall through to Step 4.
+
+4. **Step 3: Prompt for REST credentials** (only if no valid config)
+
+   Ask user via AskUserQuestion: "Atlassian MCP is unavailable. Would you like to configure the REST API fallback?"
+
+   Options:
+   - "Yes, I have Jira API credentials"
+   - "No, work offline (markdown drafts)"
+
+   If **"No"**: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
+
+   If **"Yes"**:
+   - Ask: "Enter your Atlassian site URL (e.g., https://yoursite.atlassian.net):"
+   - Ask: "Enter the email for your Atlassian account:"
+   - Ask: "Enter your Jira API token (create at https://id.atlassian.com/manage-profile/security/api-tokens):"
+   - Write credentials to `.claude/jira-rest-config.json`
+   - Validate: Bash: `python3 {SCRIPT_PATH} --action verify-auth --config .claude/jira-rest-config.json`
+   - If exit 0: Set `JIRA_MODE = "REST"`.
+   - If exit 1: "Credentials invalid. Running in offline mode." Set `JIRA_MODE = "OFFLINE"`.
+
+5. **Communicate mode to user**
+
+   - If `JIRA_MODE = "MCP"`: "Connected to Jira via MCP plugin."
+   - If `JIRA_MODE = "REST"`: "Connected to Jira via REST API."
+   - If `JIRA_MODE = "OFFLINE"`: "Running in offline mode. Will generate markdown drafts."
+
+**JIRA_MODE Effects**:
+- `JIRA_MODE = "MCP"`: All phases run with MCP tools
+- `JIRA_MODE = "REST"`: Skip Phase 1 (use cache/prompt), Skip Phase 3 (no duplicate check), Phase 6 uses REST script
+- `JIRA_MODE = "OFFLINE"`: Skip Phase 1, Skip Phase 3, Phase 6 writes markdown drafts
 
 ---
 
 ### Phase 1: Project Resolution
 
-> **SKIP if FALLBACK_MODE = true**. Proceed directly to Phase 2.
+> **SKIP if JIRA_MODE != "MCP"**. For REST and OFFLINE modes: read `.claude/jira-project.json` for cached project key. If no cache, ask user via AskUserQuestion: "Enter your Jira project key (e.g., PROJ):". Then proceed to Phase 2.
 
 **Purpose**: Determine which Jira project to create the issue in.
 
@@ -214,7 +253,7 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
 
 ### Phase 3: Duplicate Check
 
-> **SKIP if FALLBACK_MODE = true**. Proceed directly to Phase 4.
+> **SKIP if JIRA_MODE != "MCP"**. Proceed directly to Phase 4.
 
 **Purpose**: Check if a similar Jira issue already exists to prevent duplicates.
 
