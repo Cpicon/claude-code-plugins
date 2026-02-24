@@ -144,13 +144,40 @@ The generated debugger agent MUST include ALL of the following:
 - **Example**: `report-2026-01-03-1530.md`
 
 ### Save Policy
-- Always create a NEW file with timestamp (preserve history, never overwrite)
+
+**For NEW investigations** (no prior report or Jira key referenced):
+- Create a NEW file: `report-{YYYY-MM-DD-HHmm}.md`
 - Save the COMPLETE debugging report (all sections)
+- Do NOT include YAML frontmatter
+
+**For CONTINUING investigations** (user mentions a Jira key like "PROJ-123" or a previous report):
+- Search for existing linked report:
+  - Glob: `.claude/reports/debugging/report-*{KEY}*.md`
+  - Grep through reports for `jira_key: {KEY}` in frontmatter
+- Create a NEW file with key-based naming: `report-{KEY}-{YYYYMMDD-HHmm}.md`
+- Copy YAML frontmatter from the original report (preserve `jira_key`, `jira_url`)
+- Include a `## Previous Report` reference section linking to the prior report
+- Always create a new file (never overwrite) — history is preserved via timestamps
+
+**YAML Frontmatter** (include ONLY when a Jira key is known):
+```
+---
+jira_key: PROJ-123
+jira_url: https://site.atlassian.net/browse/PROJ-123
+created: {original creation timestamp}
+last_updated: {current timestamp}
+---
+```
 
 ### After Saving
 Tell the user:
-1. "Report saved to: .claude/reports/debugging/report-{timestamp}.md"
-2. "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
+1. "Report saved to: .claude/reports/debugging/{filename}"
+2. If this is a NEW investigation (no Jira link):
+   - "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
+3. If this is linked to an existing Jira issue:
+   - "This report is linked to {JIRA-KEY}."
+   - "To update the Jira task, run: /agent-team-creator:generate-jira-task {report-path}"
+   - "To incorporate more Jira feedback later, run: /agent-team-creator:update-generated-report {JIRA-KEY}"
 ```
 
 #### 5. Mandatory Report Format Section
@@ -158,6 +185,14 @@ Tell the user:
 ## Mandatory Output: Debugging Report
 
 After every debugging session, produce this report AND save it to a file:
+
+If a Jira key is known, include YAML frontmatter at the top:
+---
+jira_key: {JIRA-KEY}
+jira_url: {URL}
+created: {YYYY-MM-DD HH:mm}
+last_updated: {YYYY-MM-DD HH:mm}
+---
 
 ### Issue Summary
 - **Reported Issue**: [Original problem description]
