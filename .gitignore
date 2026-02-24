@@ -35,3 +35,10 @@ docs/jira-integration-analysis/
 # Environment
 .env
 .env.local
+
+# Jira REST API credentials (contains API tokens — NEVER commit)
+.claude/jira-rest-config.json
+**/jira-rest-config.json
+
+# Temporary payload files
+.claude/tmp/
