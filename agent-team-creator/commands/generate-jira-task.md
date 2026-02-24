@@ -383,9 +383,62 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
 
 ### Phase 6: Output Generation
 
-**Purpose**: Create the Jira issue or generate markdown draft.
+**Purpose**: Create the Jira issue, update an existing one, or generate markdown draft.
 
-#### If FALLBACK_MODE = true (Markdown Output)
+#### If UPDATE_MODE = true and FALLBACK_MODE = false (Update Existing Issue)
+
+1. **Prepare update content**
+
+   The update should contain ONLY the latest changes, NOT the entire report.
+
+   Invoke the `jira-writer` agent via Task tool with:
+   - `subagent_type`: `"agent-team-creator:jira-writer"`
+   - `prompt`: Format as a Jira comment update:
+     ```
+     ## Update Context
+
+     This is an UPDATE to existing Jira issue {EXISTING_JIRA_KEY}.
+     Format ONLY the new findings below as a concise Jira comment.
+     Do NOT reproduce the full report — just the new information.
+
+     ## New Findings
+
+     [Extract only the Timeline History sections added since last sync,
+      or if no Timeline History exists, extract the key differences
+      between this report and what was originally sent to Jira]
+     ```
+   - `description`: "Format update for Jira comment"
+
+2. **Post comment to Jira issue**
+
+   Call `mcp__plugin_atlassian_atlassian__addCommentToJiraIssue`:
+   ```
+   cloudId: [cached from Phase 1]
+   issueIdOrKey: [EXISTING_JIRA_KEY]
+   commentBody: [formatted update from jira-writer]
+   ```
+
+   - If **succeeds**:
+     - Display: "Updated Jira issue {EXISTING_JIRA_KEY} with new findings."
+     - Display: "URL: {EXISTING_JIRA_URL or https://[site].atlassian.net/browse/[KEY]}"
+   - If **fails**:
+     - Save draft to `.claude/reports/jira-drafts/update-{KEY}-{timestamp}.md`
+     - Display: "Failed to update {EXISTING_JIRA_KEY}. Draft saved to: [path]"
+     - Display: "You can manually add this as a comment in Jira."
+
+3. **Update report frontmatter**
+
+   Use Edit tool to update the source report's YAML frontmatter:
+   - Set `last_synced: {current ISO timestamp}`
+   - If `jira_key` not already present, add it
+
+#### If UPDATE_MODE = true and FALLBACK_MODE = true (Update — No MCP)
+
+1. Save the update content to `.claude/reports/jira-drafts/update-{EXISTING_JIRA_KEY}-{timestamp}.md`
+2. Display: "Atlassian MCP unavailable. Update draft saved to: [path]"
+3. Display: "Add this content as a comment to {EXISTING_JIRA_KEY} manually."
+
+#### If UPDATE_MODE = false and FALLBACK_MODE = true (Create — No MCP)
 
 1. **Create output directory**
 
@@ -435,7 +488,7 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
    - "Copy this content into Jira to create the task manually."
    - Brief summary: "Issue Type: [type], Summary: [first 50 chars of summary]..."
 
-#### If FALLBACK_MODE = false (Create Jira Issue)
+#### If UPDATE_MODE = false and FALLBACK_MODE = false (Create New Issue)
 
 1. **Validate issue type exists in project**
 
@@ -496,6 +549,29 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
    On any failure:
    - Save content to `.claude/reports/jira-drafts/draft-[timestamp].md`
    - Notify user: "Failed to create Jira issue: [error]. Saved draft to: [path]"
+
+5. **Store Jira link in source report**
+
+   Use Edit tool to add YAML frontmatter to the top of the source debugging report.
+
+   If the report already starts with `---` (has frontmatter):
+   - Add or update: `jira_key: {ISSUE-KEY}`
+   - Add or update: `jira_url: https://[site].atlassian.net/browse/{ISSUE-KEY}`
+   - Add or update: `last_synced: {current ISO timestamp}`
+
+   If the report has no frontmatter:
+   - Prepend to the file:
+     ```
+     ---
+     jira_key: {ISSUE-KEY}
+     jira_url: https://[site].atlassian.net/browse/{ISSUE-KEY}
+     created: {timestamp extracted from report filename}
+     last_synced: {current ISO timestamp}
+     ---
+
+     ```
+
+   This establishes the bidirectional link so future runs detect update mode.
 
 ---
 
