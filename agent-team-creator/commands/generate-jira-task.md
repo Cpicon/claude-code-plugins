@@ -578,20 +578,36 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
    - If no cache: Ask user via AskUserQuestion: "Enter your Jira project key (e.g., PROJ):"
    - Store as `projectKey`
 
-2. **Write issue payload**
+2. **Validate issue type exists in project**
+
+   Bash: `python3 {SCRIPT_PATH} --action get-issue-types --config .claude/jira-rest-config.json --project {projectKey}`
+
+   - Parse the `issueTypes` array from stdout JSON
+   - Check if the determined issue type (Bug or Task) exists (case-insensitive name match)
+   - If not found, look for alternatives:
+     - "Bug" alternatives: "Defect", "Issue", "Task"
+     - "Task" alternatives: "Story", "Development Task", "Bug"
+   - If an alternative is found: Use that type, notify user: "Issue type '[original]' not available. Using '[alternative]' instead."
+   - If no suitable type found:
+     - List available types (excluding subtask types where `subtask: true`)
+     - Ask user via AskUserQuestion: "Which issue type should be used?"
+     - Options: Each available non-subtask type as an option
+   - If `get-issue-types` fails (exit != 0): Warn but proceed with the original type (Jira may still accept it)
+
+3. **Write issue payload**
 
    Write to `.claude/tmp/jira-payload.json`:
    ```json
    {
      "project_key": "[projectKey]",
-     "issue_type": "[Bug or Task — determined in Phase 5]",
+     "issue_type": "[validated issue type from step 2]",
      "summary": "[extracted from jira-writer output]",
      "description": "[extracted from jira-writer output]",
      "labels": ["[sanitized labels from Phase 5]"]
    }
    ```
 
-3. **Create issue via REST**
+4. **Create issue via REST**
 
    Bash: `python3 {SCRIPT_PATH} --action create-issue --config .claude/jira-rest-config.json --payload-file .claude/tmp/jira-payload.json`
 
@@ -604,16 +620,16 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
 
        Issue: [key]
        URL: {baseUrl}/browse/[key]
-       Type: [Bug/Task]
+       Type: [validated issue type]
        Summary: [summary]
        ```
    - If **exit != 0**:
      - Save draft to `.claude/reports/jira-drafts/draft-{timestamp}.md`
      - Display: "REST API failed. Draft saved to: [path]"
 
-4. **Store Jira link in source report** — same frontmatter logic as MCP path, but use `{baseUrl}/browse/{key}` for `jira_url`
+5. **Store Jira link in source report** — same frontmatter logic as MCP path, but use `{baseUrl}/browse/{key}` for `jira_url`
 
-5. **Clean up** — delete `.claude/tmp/jira-payload.json`
+6. **Clean up** — delete `.claude/tmp/jira-payload.json`
 
 #### If UPDATE_MODE = false and JIRA_MODE = "MCP" (Create New Issue)
 
