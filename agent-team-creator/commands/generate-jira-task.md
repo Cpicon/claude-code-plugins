@@ -7,6 +7,7 @@ allowed-tools:
   - Glob
   - Grep
   - Edit
+  - Bash
   - Task
   - AskUserQuestion
   - mcp__plugin_atlassian_atlassian__getVisibleJiraProjects
@@ -41,46 +42,85 @@ This separation avoids the known MCP access bug in plugin-defined agents (GitHub
 
 ## Execution Flow
 
-Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
+Execute phases 0-6 in order. Track `JIRA_MODE` state throughout.
 
 ### Phase 0: Prerequisite Check
 
-**Purpose**: Determine if Atlassian MCP is available and authenticated.
+**Purpose**: Determine the Jira transport mode: MCP, REST, or OFFLINE.
 
-1. **Check Atlassian plugin availability**
+**State variable**: `JIRA_MODE` — one of `"MCP"`, `"REST"`, `"OFFLINE"`
+
+1. **Locate REST script** (for Step 3)
+
+   Use Glob to find `**/agent-team-creator/scripts/jira_client.py`.
+   If not found, try `~/.claude/plugins/agent-team-creator/scripts/jira_client.py`.
+   Store the absolute path as `SCRIPT_PATH`, or `null` if not found.
+
+2. **Step 1: Try Atlassian MCP**
 
    Call `mcp__plugin_atlassian_atlassian__getAccessibleAtlassianResources()`.
 
-   - If the tool call **fails** (tool not found or error):
-     - Set `FALLBACK_MODE = true`
-     - Notify user: "Atlassian MCP plugin not available. Will generate markdown draft for manual Jira creation."
-   - If **succeeds**: Continue to authentication check
-
-2. **Verify Atlassian authentication** (only if plugin available)
+   - If the tool call **succeeds**: Continue to authentication check
+   - If **fails** (tool not found or error): Fall through to Step 3
 
    Call `mcp__plugin_atlassian_atlassian__atlassianUserInfo()`.
 
-   - If **fails** (401/403 or empty response):
-     - Set `FALLBACK_MODE = true`
-     - Notify user: "Not authenticated with Atlassian. Please run `claude mcp auth --server atlassian` to authenticate. Generating markdown draft instead."
-   - If **succeeds**: User is logged in, continue with normal mode
+   - If **succeeds**: Set `JIRA_MODE = "MCP"`. User is logged in. Skip to step 5.
+   - If **fails** (401/403): Fall through to Step 3
 
-3. **Communicate mode to user**
+3. **Step 2: Try REST API** (only if MCP failed)
 
-   - If `FALLBACK_MODE = true`: "Running in fallback mode - will generate markdown draft for manual Jira creation."
-   - If `FALLBACK_MODE = false`: "Connected to Jira. Will create issue directly."
+   If `SCRIPT_PATH` is null: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
 
-**FALLBACK_MODE Effects**:
-- Skip Phase 1 (Project Resolution) - requires MCP
-- Skip Phase 3 (Duplicate Check) - requires MCP
-- Continue Phases 2, 4, 5 - work without MCP
-- Phase 6: Write to markdown file instead of creating Jira issue
+   Check Python availability:
+   Bash: `python3 --version`
+   If fails: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
+
+   Check for cached REST credentials:
+   Use Read tool to check if `.claude/jira-rest-config.json` exists.
+
+   - If **file exists and has `baseUrl`, `email`, `apiToken`**:
+     - Validate credentials:
+       Bash: `python3 {SCRIPT_PATH} --action verify-auth --config .claude/jira-rest-config.json`
+     - If exit 0: Set `JIRA_MODE = "REST"`. Skip to step 5.
+     - If exit 1: Delete stale config file. Fall through to Step 4.
+   - If **file missing or invalid**: Fall through to Step 4.
+
+4. **Step 3: Prompt for REST credentials** (only if no valid config)
+
+   Ask user via AskUserQuestion: "Atlassian MCP is unavailable. Would you like to configure the REST API fallback?"
+
+   Options:
+   - "Yes, I have Jira API credentials"
+   - "No, work offline (markdown drafts)"
+
+   If **"No"**: Set `JIRA_MODE = "OFFLINE"`. Skip to step 5.
+
+   If **"Yes"**:
+   - Ask: "Enter your Atlassian site URL (e.g., https://yoursite.atlassian.net):"
+   - Ask: "Enter the email for your Atlassian account:"
+   - Ask: "Enter your Jira API token (create at https://id.atlassian.com/manage-profile/security/api-tokens):"
+   - Write credentials to `.claude/jira-rest-config.json`
+   - Validate: Bash: `python3 {SCRIPT_PATH} --action verify-auth --config .claude/jira-rest-config.json`
+   - If exit 0: Set `JIRA_MODE = "REST"`.
+   - If exit 1: "Credentials invalid. Running in offline mode." Set `JIRA_MODE = "OFFLINE"`.
+
+5. **Communicate mode to user**
+
+   - If `JIRA_MODE = "MCP"`: "Connected to Jira via MCP plugin."
+   - If `JIRA_MODE = "REST"`: "Connected to Jira via REST API."
+   - If `JIRA_MODE = "OFFLINE"`: "Running in offline mode. Will generate markdown drafts."
+
+**JIRA_MODE Effects**:
+- `JIRA_MODE = "MCP"`: All phases run with MCP tools
+- `JIRA_MODE = "REST"`: Skip Phase 1 (use cache/prompt), Skip Phase 3 (no duplicate check), Phase 6 uses REST script
+- `JIRA_MODE = "OFFLINE"`: Skip Phase 1, Skip Phase 3, Phase 6 writes markdown drafts
 
 ---
 
 ### Phase 1: Project Resolution
 
-> **SKIP if FALLBACK_MODE = true**. Proceed directly to Phase 2.
+> **SKIP if JIRA_MODE != "MCP"**. For REST and OFFLINE modes: read `.claude/jira-project.json` for cached project key. If no cache, ask user via AskUserQuestion: "Enter your Jira project key (e.g., PROJ):". Then proceed to Phase 2.
 
 **Purpose**: Determine which Jira project to create the issue in.
 
@@ -213,7 +253,7 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
 
 ### Phase 3: Duplicate Check
 
-> **SKIP if FALLBACK_MODE = true**. Proceed directly to Phase 4.
+> **SKIP if JIRA_MODE != "MCP"**. Proceed directly to Phase 4.
 
 **Purpose**: Check if a similar Jira issue already exists to prevent duplicates.
 
@@ -381,11 +421,24 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
 
 ---
 
+### REST API Call Pattern
+
+When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
+
+1. Create `.claude/tmp/` directory if it doesn't exist
+2. Write JSON payload to `.claude/tmp/jira-payload.json`
+3. Execute: `python3 {SCRIPT_PATH} --action {action} --config .claude/jira-rest-config.json [--issue-key {KEY}] [--payload-file .claude/tmp/jira-payload.json]`
+4. Parse stdout JSON: `{ "ok": true, ... }` on success or `{ "ok": false, "error": "..." }` on failure
+5. If exit code != 0: degrade to OFFLINE mode for this operation
+6. Clean up: delete `.claude/tmp/jira-payload.json`
+
+**Mid-execution auth failure**: If REST returns exit code 1 (auth error) after Phase 0 validated successfully, fall directly to the OFFLINE branch. Do NOT re-prompt for credentials or restart the cascade.
+
 ### Phase 6: Output Generation
 
 **Purpose**: Create the Jira issue, update an existing one, or generate markdown draft.
 
-#### If UPDATE_MODE = true and FALLBACK_MODE = false (Update Existing Issue)
+#### If UPDATE_MODE = true and JIRA_MODE = "MCP" (Update Existing Issue)
 
 1. **Prepare update content**
 
@@ -432,13 +485,42 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
    - Set `last_synced: {current ISO timestamp}`
    - If `jira_key` not already present, add it
 
-#### If UPDATE_MODE = true and FALLBACK_MODE = true (Update — No MCP)
+#### If UPDATE_MODE = true and JIRA_MODE = "REST" (Update via REST)
+
+1. **Prepare update content** — same jira-writer invocation as the MCP update path above.
+
+2. **Write comment payload**
+
+   Write to `.claude/tmp/jira-payload.json`:
+   ```json
+   {
+     "body": "[formatted update content from jira-writer]"
+   }
+   ```
+
+3. **Post comment via REST**
+
+   Bash: `python3 {SCRIPT_PATH} --action add-comment --config .claude/jira-rest-config.json --issue-key {EXISTING_JIRA_KEY} --payload-file .claude/tmp/jira-payload.json`
+
+   - If **exit 0**:
+     - Display: "Updated Jira issue {EXISTING_JIRA_KEY} with new findings."
+     - Read `baseUrl` from `.claude/jira-rest-config.json`
+     - Display: "URL: {baseUrl}/browse/{EXISTING_JIRA_KEY}"
+   - If **exit != 0**:
+     - Save draft to `.claude/reports/jira-drafts/update-{EXISTING_JIRA_KEY}-{timestamp}.md`
+     - Display: "REST API failed. Draft saved to: [path]"
+
+4. **Update report frontmatter** — same as MCP path: set `last_synced: {timestamp}`
+
+5. **Clean up** — delete `.claude/tmp/jira-payload.json`
+
+#### If UPDATE_MODE = true and JIRA_MODE = "OFFLINE" (Update — No MCP)
 
 1. Save the update content to `.claude/reports/jira-drafts/update-{EXISTING_JIRA_KEY}-{timestamp}.md`
-2. Display: "Atlassian MCP unavailable. Update draft saved to: [path]"
+2. Display: "Jira unavailable. Update draft saved to: [path]"
 3. Display: "Add this content as a comment to {EXISTING_JIRA_KEY} manually."
 
-#### If UPDATE_MODE = false and FALLBACK_MODE = true (Create — No MCP)
+#### If UPDATE_MODE = false and JIRA_MODE = "OFFLINE" (Create — No MCP)
 
 1. **Create output directory**
 
@@ -488,7 +570,68 @@ Execute phases 0-6 in order. Track `FALLBACK_MODE` state throughout.
    - "Copy this content into Jira to create the task manually."
    - Brief summary: "Issue Type: [type], Summary: [first 50 chars of summary]..."
 
-#### If UPDATE_MODE = false and FALLBACK_MODE = false (Create New Issue)
+#### If UPDATE_MODE = false and JIRA_MODE = "REST" (Create via REST)
+
+1. **Resolve project key**
+
+   - Read `.claude/jira-project.json` for cached `projectKey`
+   - If no cache: Ask user via AskUserQuestion: "Enter your Jira project key (e.g., PROJ):"
+   - Store as `projectKey`
+
+2. **Validate issue type exists in project**
+
+   Bash: `python3 {SCRIPT_PATH} --action get-issue-types --config .claude/jira-rest-config.json --project {projectKey}`
+
+   - Parse the `issueTypes` array from stdout JSON
+   - Check if the determined issue type (Bug or Task) exists (case-insensitive name match)
+   - If not found, look for alternatives:
+     - "Bug" alternatives: "Defect", "Issue", "Task"
+     - "Task" alternatives: "Story", "Development Task", "Bug"
+   - If an alternative is found: Use that type, notify user: "Issue type '[original]' not available. Using '[alternative]' instead."
+   - If no suitable type found:
+     - List available types (excluding subtask types where `subtask: true`)
+     - Ask user via AskUserQuestion: "Which issue type should be used?"
+     - Options: Each available non-subtask type as an option
+   - If `get-issue-types` fails (exit != 0): Warn but proceed with the original type (Jira may still accept it)
+
+3. **Write issue payload**
+
+   Write to `.claude/tmp/jira-payload.json`:
+   ```json
+   {
+     "project_key": "[projectKey]",
+     "issue_type": "[validated issue type from step 2]",
+     "summary": "[extracted from jira-writer output]",
+     "description": "[extracted from jira-writer output]",
+     "labels": ["[sanitized labels from Phase 5]"]
+   }
+   ```
+
+4. **Create issue via REST**
+
+   Bash: `python3 {SCRIPT_PATH} --action create-issue --config .claude/jira-rest-config.json --payload-file .claude/tmp/jira-payload.json`
+
+   - If **exit 0**:
+     - Parse response: `key`, `url`
+     - Read `baseUrl` from `.claude/jira-rest-config.json`
+     - Display success:
+       ```
+       Successfully created Jira issue via REST API!
+
+       Issue: [key]
+       URL: {baseUrl}/browse/[key]
+       Type: [validated issue type]
+       Summary: [summary]
+       ```
+   - If **exit != 0**:
+     - Save draft to `.claude/reports/jira-drafts/draft-{timestamp}.md`
+     - Display: "REST API failed. Draft saved to: [path]"
+
+5. **Store Jira link in source report** — same frontmatter logic as MCP path, but use `{baseUrl}/browse/{key}` for `jira_url`
+
+6. **Clean up** — delete `.claude/tmp/jira-payload.json`
+
+#### If UPDATE_MODE = false and JIRA_MODE = "MCP" (Create New Issue)
 
 1. **Validate issue type exists in project**
 

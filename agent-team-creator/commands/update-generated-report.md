@@ -64,29 +64,41 @@ Execute phases 0-5 in order.
    - **Invalid input**: Argument doesn't match any pattern
      - Error: "Invalid input: '{argument}'. Provide a Jira issue key (e.g., PROJ-123) or a path to a debugging report."
 
-2. **Check Atlassian MCP availability** (if Jira Key Mode or if report has frontmatter)
+2. **Determine Jira transport mode**
+
+   Use Glob to find `**/agent-team-creator/scripts/jira_client.py`.
+   Store as `SCRIPT_PATH` or `null`.
 
    Call `mcp__plugin_atlassian_atlassian__getAccessibleAtlassianResources()`.
 
-   - If **succeeds**: Set `JIRA_AVAILABLE = true`
-   - If **fails**: Set `JIRA_AVAILABLE = false`
+   - If **succeeds**: Set `JIRA_MODE = "MCP"`
+   - If **fails**: Try REST cascade:
+     - If `SCRIPT_PATH` is null or `python3 --version` fails: Set `JIRA_MODE = "OFFLINE"`
+     - Read `.claude/jira-rest-config.json`:
+       - If valid: Bash: `python3 {SCRIPT_PATH} --action verify-auth --config .claude/jira-rest-config.json`
+         - Exit 0: `JIRA_MODE = "REST"`
+         - Exit 1: `JIRA_MODE = "OFFLINE"`
+       - If missing: Ask user to configure REST (same prompt pattern as `/generate-jira-task` Phase 0)
+         - Configured: `JIRA_MODE = "REST"`
+         - Declined: `JIRA_MODE = "OFFLINE"`
 
-   If Jira Key Mode and `JIRA_AVAILABLE = false`:
+   **If Jira Key Mode and `JIRA_MODE = "OFFLINE"`:**
    - Search for local report linked to the key:
      - Glob: `.claude/reports/debugging/report-*{INPUT_JIRA_KEY}*.md`
      - Grep through `.claude/reports/debugging/report-*.md` for `jira_key: {INPUT_JIRA_KEY}`
-   - If found: Switch to Local Report Mode with warning: "Atlassian MCP unavailable. Found local report linked to {KEY}. Proceeding with local data only."
-   - If not found: Error — "Cannot reach Jira and no local report found for {KEY}. Ensure Atlassian MCP is configured or provide a report path."
+   - If found: Switch to Local Report Mode with warning: "Jira unavailable. Found local report linked to {KEY}."
+   - If not found: Error — "Cannot reach Jira and no local report found for {KEY}."
 
-3. **Resolve cloudId** (if `JIRA_AVAILABLE = true`)
+   **If Jira Key Mode and `JIRA_MODE = "REST"`:**
+   - Issue data will be fetched via REST in Phase 1. Continue.
+
+3. **Resolve cloudId** (only if `JIRA_MODE = "MCP"`)
+
+   > **SKIP if JIRA_MODE != "MCP"**. REST uses `baseUrl` from config; cloudId not needed.
 
    Use Read tool to check if `.claude/jira-project.json` exists.
-
-   - If file exists and contains `cloudId`:
-     - Parse and store `cloudId`
-   - If file does not exist or is missing `cloudId`:
-     - Extract `cloudId` from the `getAccessibleAtlassianResources()` response (already called above)
-     - Store for use in subsequent phases
+   - If file exists and contains `cloudId`: parse and store
+   - If not: extract from the `getAccessibleAtlassianResources()` response
 
 ---
 
@@ -118,6 +130,22 @@ Execute phases 0-5 in order.
    - Set `JIRA_COMMENTS = []`
    - Note: "No comments found on {INPUT_JIRA_KEY}. Will proceed with description only."
 
+#### If JIRA_MODE = "REST" and INPUT_JIRA_KEY is set
+
+1. **Fetch Jira issue via REST**
+
+   Bash: `python3 {SCRIPT_PATH} --action get-issue --config .claude/jira-rest-config.json --issue-key {INPUT_JIRA_KEY}`
+
+   Parse stdout JSON and store:
+   - `JIRA_SUMMARY` = `response.summary`
+   - `JIRA_DESCRIPTION` = `response.description`
+   - `JIRA_STATUS` = `response.status`
+   - `JIRA_COMMENTS` = `response.comments` (array of `{author, created, body}`)
+
+   If exit code != 0:
+   - Warn: "Failed to fetch issue via REST. Proceeding with local data only."
+   - Set `JIRA_COMMENTS = []`
+
 2. **Find linked local report**
 
    Search for a local report linked to this Jira key:
@@ -141,13 +169,27 @@ Execute phases 0-5 in order.
    - If `jira_key` is present and non-empty: Store as `INPUT_JIRA_KEY`
    - If `jira_url` is present: Store as `EXISTING_JIRA_URL`
 
-3. **Fetch Jira data** (if `INPUT_JIRA_KEY` was extracted and `JIRA_AVAILABLE = true`)
+3. **Fetch Jira data** (if `INPUT_JIRA_KEY` was extracted and `JIRA_MODE != "OFFLINE"`)
 
-   Follow the same `getJiraIssue` call as Jira Key Mode above.
+   If `JIRA_MODE = "MCP"`: Follow the same `getJiraIssue` call as Jira Key Mode above.
 
-   If `JIRA_AVAILABLE = false` or no `jira_key` in frontmatter:
+   If `JIRA_MODE = "REST"` and `INPUT_JIRA_KEY` was extracted from frontmatter:
+   - Fetch issue via REST (same pattern as Jira Key Mode above)
+
+   If `JIRA_MODE = "OFFLINE"` or no `jira_key` in frontmatter:
    - Set `JIRA_COMMENTS = []`
    - Note: "No Jira data available. Proceeding with local report and user feedback only."
+
+**Response normalization**: After fetching Jira data via either MCP or REST, the following
+variables must be populated identically regardless of source:
+- `JIRA_SUMMARY` — string
+- `JIRA_DESCRIPTION` — string
+- `JIRA_STATUS` — string
+- `JIRA_COMMENTS` — array of `{author: string, created: string, body: string}`
+
+MCP returns nested structures (`fields.summary`, `fields.comment.comments[]`).
+REST script returns flattened structures (`summary`, `comments[]`).
+All downstream phases use the normalized variable names.
 
 ---
 
