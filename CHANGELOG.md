@@ -7,14 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Release automation script (`scripts/bump-version.sh`)
-- Release guide documentation (`RELEASING.md`)
-
 ## [1.1.0] - 2026-02-24
 
 ### Added
 - REST API fallback tier for Jira integration (MCP -> REST -> OFFLINE cascade)
+- Release automation script (`scripts/bump-version.sh`)
+- Release guide documentation (`RELEASING.md`)
 - Python REST client (`agent-team-creator/scripts/jira_client.py`) with 8 actions, zero external dependencies
 - Jira REST API knowledge skill (`agent-team-creator/skills/jira-rest-api/`)
 - Wiki markup reference guide for REST API v2 format
