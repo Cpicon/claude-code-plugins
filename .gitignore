@@ -1,6 +1,17 @@
 # Local Claude settings
-.claude/*.local.md
+.claude/
 *.local.md
+docs/app/.claude/jira-project.json
+docs/app/.claude/jira-rest-config.json
+docs/app/.claude/settings.local.json
+docs/app/.claude/tmp/
+docs/plans/
+
+# Auto-generated Claude memory files
+.claude-plugin/CLAUDE.md
+agent-team-creator/.claude-plugin/CLAUDE.md
+agent-team-creator/commands/CLAUDE.md
+docs/CLAUDE.md
 
 # OS files
 .DS_Store
