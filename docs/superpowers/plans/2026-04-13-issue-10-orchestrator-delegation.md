@@ -10,13 +10,15 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-13-issue-10-orchestrator-delegation-design.md`
 
+> **Important: Section anchors, not line numbers.** Tasks in this plan locate sections by header text, not absolute line numbers. Each prior task changes the file length, so line numbers from the original file are invalid after the first edit. Search for the header text to find the section to modify.
+
 ---
 
 ## File Map
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `agent-team-creator/commands/generate-debugger.md` | Modify | Phase 1 guard, Phase 3 tools template, Phase 4 procedural workflow + report format, Phase 5 checklist, example output |
+| `agent-team-creator/commands/generate-debugger.md` | Modify | Phase 1 guard, Phase 3 tools template, Phase 4 procedural workflow + report format + role reminder, Phase 5 checklist, example output |
 | `agent-team-creator/agents/team-architect.md` | Modify | Add orchestrator note to Agent Quality Standards |
 
 ---
@@ -24,13 +26,13 @@
 ### Task 1: Add Phase 1 Agent Discovery Guard
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:23-33`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `### Phase 1: Discovery`
 
 - [ ] **Step 1: Replace Phase 1 Discovery section**
 
-Replace lines 23-33 (the current Phase 1: Discovery section) with explicit Glob/Grep discovery and a guard:
+Find the section starting with `### Phase 1: Discovery` (original line 23). Replace everything from that header through the end of `2. **Analyze Project Context**` subsection (through original line 33) with:
 
-```markdown
+````markdown
 ### Phase 1: Discovery
 
 1. **Discover Existing Project Agents**
@@ -52,14 +54,14 @@ Replace lines 23-33 (the current Phase 1: Discovery section) with explicit Glob/
    - **Architecture**: Monolith, microservices, serverless, modular, layered
    - **Tech Stack**: Languages, frameworks, databases, infrastructure
    - **Project Type**: Backend API, frontend app, full-stack, library, CLI, data pipeline
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
-Read `generate-debugger.md` lines 23-45 and confirm:
-- Glob on `.claude/agents/*.md` is step 1
-- Guard (stop + message) is step 2 within the discovery
-- Grep validation is present
+Read the Phase 1 section and confirm:
+- Glob on `.claude/agents/*.md` is the first action
+- Guard (stop + prompt message) fires when no agent files are found
+- Grep validation step is present
 - "Analyze Project Context" is preserved as sub-step 2
 
 - [ ] **Step 3: Commit**
@@ -74,13 +76,13 @@ git commit -m "fix(#10): add Phase 1 agent discovery guard with Glob/Grep"
 ### Task 2: Update Phase 3 Tools Field Template
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:68-88`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `### Phase 3: Generate the Debugger Agent`
 
-- [ ] **Step 1: Replace the Phase 3 template frontmatter**
+- [ ] **Step 1: Replace the Phase 3 template code block**
 
-In the Phase 3 code block (lines 72-88), replace the `tools` line and system prompt outline. The full replacement for lines 72-88:
+Find the section `### Phase 3: Generate the Debugger Agent`. Within it, find the fenced code block that starts with ```` ```markdown ``` `` and contains the debugger frontmatter template (with `tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]`). Replace that entire code block with:
 
-```markdown
+````markdown
 ```markdown
 ---
 name: project-debugger
@@ -103,17 +105,17 @@ findings across specialists and produces structured reports.
 5. Mandatory report format
 6. Role reminder (closing reinforcement)
 ```
-```
+````
 
 Note: `{agent-names-from-registry}` is a placeholder that Phase 3 dynamically fills with the actual agent names from Phase 1 (e.g., `Agent(acme-backend-expert, acme-database-expert, acme-react-expert)`).
 
 - [ ] **Step 2: Verify the edit**
 
-Read `generate-debugger.md` lines 68-92 and confirm:
+Read the Phase 3 section and confirm:
 - `tools:` uses `Agent({agent-names-from-registry}), Read, Write, Grep, Glob, Bash`
 - `Task` is no longer in the tools list
 - Role definition opening paragraph is present after the `---`
-- System prompt outline lists "Mandatory 4-step procedural workflow" and "Role reminder"
+- System prompt outline includes "Mandatory 4-step procedural workflow" and "Role reminder"
 
 - [ ] **Step 3: Commit**
 
@@ -127,14 +129,14 @@ git commit -m "fix(#10): update Phase 3 tools field with Agent(...) and role def
 ### Task 3: Replace Core Rules with Procedural Workflow
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:106-115`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `#### 2. Core Rules Section (MANDATORY)`
 
 - [ ] **Step 1: Replace Phase 4 Section 2 (Core Rules)**
 
-Replace the "#### 2. Core Rules Section (MANDATORY)" block (lines 106-115) with:
+Find the section `#### 2. Core Rules Section (MANDATORY)`. Replace everything from that header through its closing code fence with:
 
-```markdown
-#### 2. Mandatory Procedural Workflow Section (MANDATORY — replaces Core Rules)
+````markdown
+#### 2. Mandatory Procedural Workflow Section (MANDATORY -- replaces Core Rules)
 ```markdown
 ## MANDATORY WORKFLOW
 
@@ -198,7 +200,7 @@ Scope Boundaries).
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
 ```
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
@@ -220,13 +222,13 @@ git commit -m "fix(#10): replace Core Rules with mandatory procedural workflow"
 ### Task 4: Replace Report Format
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:183-238`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `#### 5. Mandatory Report Format Section`
 
 - [ ] **Step 1: Replace Phase 4 Section 5 (Mandatory Report Format)**
 
-Replace lines 183-238 (the "#### 5. Mandatory Report Format Section") with:
+Find the section `#### 5. Mandatory Report Format Section`. Replace everything from that header through its closing code fence (the section that contains `### Issue Summary`, `### Investigation Trail`, `### Root Cause Analysis`, `### Impact Assessment`, `### Solutions (Ordered by Effort)`, `### Agents Used`) with:
 
-```markdown
+````markdown
 #### 5. Mandatory Report Format Section
 ```markdown
 ## Mandatory Output: Debugging Report
@@ -288,7 +290,7 @@ When multiple solutions ARE warranted, differentiate them by:
 - **Out of Scope**: [Related areas NOT affected]
 - **Boundary Risks**: [Edge cases where scope might expand]
 ```
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
@@ -307,27 +309,63 @@ git commit -m "fix(#10): update report format with consolidated investigation tr
 
 ---
 
-### Task 5: Update Example Output Structure
+### Task 5: Add Role Reminder Section to Phase 4
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:260-341`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — after `#### 5. Mandatory Report Format Section`
+
+- [ ] **Step 1: Insert Phase 4 Section 6 (Role Reminder)**
+
+Find the end of the `#### 5. Mandatory Report Format Section` (after its closing code fence). Insert the following new section immediately after it, before `## Usage`:
+
+````markdown
+
+#### 6. Role Reminder Section (MANDATORY)
+```markdown
+## Role Reminder
+
+This agent coordinates and synthesizes. It never implements fixes
+directly. It delegates investigation to specialists, connects findings
+across domains, and produces structured debug reports.
+```
+````
+
+- [ ] **Step 2: Verify the edit**
+
+Read the area between the report format section and `## Usage` and confirm:
+- `#### 6. Role Reminder Section (MANDATORY)` exists
+- Contains the closing reinforcement text
+- Does not duplicate or conflict with any other section
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add agent-team-creator/commands/generate-debugger.md
+git commit -m "fix(#10): add Role Reminder section to Phase 4 template"
+```
+
+---
+
+### Task 6: Update Example Output Structure
+
+**Files:**
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `## Example Output Structure`
 
 - [ ] **Step 1: Replace the example output**
 
-Replace lines 262-341 (the example output code block) with an updated example that reflects all changes: `Agent(...)` in tools, role sandwich, procedural workflow instead of Core Rules, and the new report format. The example should show:
+Find the section `## Example Output Structure`. Replace the entire code block within it (from the opening ```` ```markdown ```` after the "For a Next.js + Express + PostgreSQL project..." line through its closing code fence) with an updated example that reflects all changes.
 
+The replacement example must include in this order:
 1. Updated frontmatter with `tools: Agent(frontend-expert, backend-expert, database-expert), Read, Write, Grep, Glob, Bash`
 2. Role definition opening paragraph after the `---`
-3. Available Specialists table (unchanged)
-4. Procedural workflow section (replacing Core Rules)
-5. Orchestration patterns (unchanged)
-6. Report Persistence (unchanged)
-7. New Mandatory Output report format
-8. Role Reminder closing reinforcement as the final section
+3. Available Specialists table
+4. `## MANDATORY WORKFLOW` section (replacing Core Rules)
+5. Orchestration patterns using "Dispatch" language
+6. Report Persistence section (unchanged from current)
+7. Reference to mandatory report format
+8. `## Role Reminder` as the final section
 
-```markdown
-For a Next.js + Express + PostgreSQL project with existing agents `frontend-expert.md`, `backend-expert.md`, and `database-expert.md`:
-
+````markdown
 ```markdown
 ---
 name: project-debugger
@@ -413,12 +451,21 @@ Save the completed debugging report to a file and inform the user.
 - **Example**: `report-2026-01-03-1530.md`
 
 ### Save Policy
-- Always create a NEW file with timestamp (preserve history, never overwrite)
+
+**For NEW investigations** (no prior report or Jira key referenced):
+- Create a NEW file: `report-{YYYY-MM-DD-HHmm}.md`
 - Save the COMPLETE debugging report (all sections)
+- Do NOT include YAML frontmatter
+
+**For CONTINUING investigations** (user mentions a Jira key like "PROJ-123" or a previous report):
+- Search for existing linked report
+- Create a NEW file with key-based naming: `report-{KEY}-{YYYYMMDD-HHmm}.md`
+- Copy YAML frontmatter from the original report (preserve `jira_key`, `jira_url`)
+- Always create a new file (never overwrite)
 
 ### After Saving
 Tell the user:
-1. "Report saved to: .claude/reports/debugging/report-{timestamp}.md"
+1. "Report saved to: .claude/reports/debugging/{filename}"
 2. "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
 
 ## Mandatory Output: Debugging Report
@@ -431,16 +478,17 @@ This agent coordinates and synthesizes. It never implements fixes
 directly. It delegates investigation to specialists, connects findings
 across domains, and produces structured debug reports.
 ```
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
 Read the example output and confirm:
 - `tools:` includes `Agent(frontend-expert, backend-expert, database-expert)`
 - Role definition is the first paragraph after `---`
-- "MANDATORY WORKFLOW" section replaces "Core Rules"
+- `## MANDATORY WORKFLOW` section replaces "Core Rules"
 - Orchestration patterns use "Dispatch" language instead of "Consult"
-- "Role Reminder" is the final section
+- Report Persistence includes the full NEW/CONTINUING save policy
+- `## Role Reminder` is the final section
 
 - [ ] **Step 3: Commit**
 
@@ -451,16 +499,16 @@ git commit -m "fix(#10): update example output with procedural workflow and role
 
 ---
 
-### Task 6: Update Phase 5 Verification Checklist
+### Task 7: Update Phase 5 Verification Checklist
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:343-354`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `### Phase 5: Verify Generated Debugger`
 
 - [ ] **Step 1: Replace Phase 5 checklist**
 
-Replace the Phase 5 checklist (lines 347-354) with:
+Find the section `### Phase 5: Verify Generated Debugger`. Within it, find the `**Required Section Checklist:**` block. Replace the checklist items (from the first `- [ ]` through the paragraph ending with "will fail.") with:
 
-```markdown
+````markdown
 **Required Section Checklist:**
 - [ ] `## Available Specialists` - Table of project agents
 - [ ] `## MANDATORY WORKFLOW` - 4-step procedural workflow with dispatch gate
@@ -470,7 +518,7 @@ Replace the Phase 5 checklist (lines 347-354) with:
 - [ ] `## Role Reminder` - Closing reinforcement of coordination role
 
 If any section is missing, add it before completing. The Report Persistence section is especially critical - without it, reports won't be saved and `/generate-jira-task` will fail.
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
@@ -489,16 +537,16 @@ git commit -m "fix(#10): update Phase 5 checklist for procedural workflow"
 
 ---
 
-### Task 7: Update Output Summary Section
+### Task 8: Update Output Summary Section
 
 **Files:**
-- Modify: `agent-team-creator/commands/generate-debugger.md:253-258`
+- Modify: `agent-team-creator/commands/generate-debugger.md` — section `## Output`
 
 - [ ] **Step 1: Update the Output section**
 
-Replace lines 253-258 with:
+Find the section `## Output`. Replace the bullet list (starting with "Generates `project-debugger.md`..." through the last bullet) with:
 
-```markdown
+````markdown
 Generates `project-debugger.md` in `.claude/agents/` with:
 - `Agent(specialist1, ...)` in tools field for subagent dispatching
 - Role definition opening (coordination, not implementation)
@@ -507,9 +555,17 @@ Generates `project-debugger.md` in `.claude/agents/` with:
 - **Report persistence instructions** (saves to `.claude/reports/debugging/`)
 - Mandatory report format with investigation trail
 - Role reminder closing reinforcement
-```
+````
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Verify the edit**
+
+Read the Output section and confirm:
+- 7 bullet points are present
+- First bullet mentions `Agent(specialist1, ...)`
+- Last bullet mentions "Role reminder closing reinforcement"
+- No reference to "Core rules"
+
+- [ ] **Step 3: Commit**
 
 ```bash
 git add agent-team-creator/commands/generate-debugger.md
@@ -518,22 +574,22 @@ git commit -m "fix(#10): update output summary to reflect new structure"
 
 ---
 
-### Task 8: Add Orchestrator Note to team-architect.md
+### Task 9: Add Orchestrator Note to team-architect.md
 
 **Files:**
-- Modify: `agent-team-creator/agents/team-architect.md:159-169`
+- Modify: `agent-team-creator/agents/team-architect.md` — section `## Agent Quality Standards`
 
 - [ ] **Step 1: Add orchestrator guidance to Agent Quality Standards**
 
-After line 169 (after item 7 "Provide guidance"), add a new item:
+Find the section `## Agent Quality Standards`. After item 7 (`7. **Provide guidance**...`), add a new item:
 
-```markdown
+````markdown
 8. **Include `Agent(...)` for orchestrators** - If the agent coordinates other agents (e.g., a debugger), its `tools` field must include `Agent(agent1, agent2, ...)` listing the agents it can dispatch. Without this, the agent cannot spawn subagents when running via `claude --agent`. See the [official docs](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned).
-```
+````
 
 - [ ] **Step 2: Verify the edit**
 
-Read `team-architect.md` lines 159-175 and confirm:
+Read the Agent Quality Standards section and confirm:
 - Item 8 is present with `Agent(...)` guidance
 - The URL to official docs is included
 - Existing items 1-7 are unchanged
@@ -547,9 +603,9 @@ git commit -m "fix(#10): add orchestrator Agent(...) guidance to team-architect"
 
 ---
 
-### Task 9: Manual Verification
+### Task 10: Final Verification
 
-This is a markdown template project with no automated tests. Verification requires generating a debugger and checking its behavior.
+This is a markdown template project with no automated tests. Verification requires reviewing the full file and generating a debugger.
 
 - [ ] **Step 1: Review all changes**
 
@@ -558,24 +614,24 @@ git diff main...HEAD --stat
 git log --oneline main..HEAD
 ```
 
-Confirm all 8 commits are present and only 2 files were modified.
+Confirm all 9 commits are present and only 2 files were modified.
 
 - [ ] **Step 2: Read the final `generate-debugger.md`**
 
 Read the complete file and verify against the acceptance criteria:
 - Phase 1 runs Glob/Grep with guard
 - Phase 3 template has `Agent(...)` in tools
-- Phase 4 has procedural workflow (not Core Rules)
-- Phase 4 has single + parallel dispatch examples
-- Phase 4 has role definition at top
+- Phase 4 Section 2 has procedural workflow (not Core Rules)
+- Phase 4 Section 2 has single + parallel dispatch examples
+- Phase 4 Section 6 has Role Reminder
 - Report format has 5 sections (no forced three-tier solutions)
 - Phase 5 checklist includes MANDATORY WORKFLOW and Role Reminder
-- Example output reflects all changes
-- Role Reminder is the last section in the example
+- Example output reflects all changes with Role Reminder as last section
+- Role definition is at the top of the example system prompt
 
 - [ ] **Step 3: Read the final `team-architect.md`**
 
-Read lines 159-175 and confirm item 8 about orchestrator `Agent(...)` is present.
+Read the Agent Quality Standards section and confirm item 8 about orchestrator `Agent(...)` is present.
 
 - [ ] **Step 4: (Manual) Generate a test debugger**
 
