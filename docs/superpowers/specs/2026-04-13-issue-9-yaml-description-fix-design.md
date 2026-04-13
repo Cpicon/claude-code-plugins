@@ -91,36 +91,60 @@ Dropping `<example>` blocks from the `description` field reduces auto-triggering
 
 | File | What to Change |
 |------|---------------|
-| `skills/agent-generation/references/agent-templates.md` | All 6 agent type templates: convert `description:` code blocks from `<example>` format to `description: \|` format |
-| `skills/agent-generation/SKILL.md` | Update format instructions, template examples, and "Required fields" to reference `description: \|` instead of `<example>` blocks |
+| `skills/agent-generation/references/agent-templates.md` | All 5 agent type templates (Tech-Stack, Architecture, Domain, Testing, DevOps): convert `description:` code blocks from `<example>` format to `description: \|` format |
+| `skills/agent-generation/SKILL.md` | Update all 7 locations containing `<example>` blocks (see section list below) |
 | `skills/agent-generation/examples/tech-stack-expert.md` | Convert example agent description to `description: \|` format |
 | `skills/agent-generation/examples/architecture-expert.md` | Same |
 | `skills/agent-generation/examples/domain-expert.md` | Same |
+
+**`SKILL.md` sections to update (7 locations):**
+1. "Strong Trigger Conditions" — code block example
+2. "Agent Structure Template" — code block with full template
+3. "Required fields" text — references `<example>` blocks
+4. "Include Project-Specific Knowledge" — code block example
+5. "Tech-Stack Expert Description" — example description
+6. "Architecture Expert Description" — example description
+7. "Domain Expert Description" — example description
 
 ### Category 3: Command Template (1 file)
 
 | File | What to Change |
 |------|---------------|
-| `commands/generate-debugger.md` | Phase 3 template example: convert description format |
+| `commands/generate-debugger.md` | Two locations: (1) Phase 3 template code block with `description: [Project-specific description with trigger examples]`, and (2) "Example Output Structure" section showing a full agent example with bare description |
+
+### Category 4: Documentation Examples (6 files)
+
+| File | What to Change |
+|------|---------------|
+| `docs/app/.claude/agents/project-debugger.md` | Convert `description:` from `<example>` format to `description: \|` |
+| `docs/app/.claude/agents/user-api-architecture-expert.md` | Same |
+| `docs/app/.claude/agents/user-api-fastapi-expert.md` | Same |
+| `docs/app/.claude/agents/user-api-testing-expert.md` | Same |
+| `docs/app/.claude/agents/user-api-security-expert.md` | Same |
+| `docs/jira-integration-roadmap.md` | Update agent definition code block containing `<example>` in `description:` field |
+
+**Note:** These are reference/example files shipped with the repo. Leaving them in the old format would contradict the new format rules and could mislead someone copying the pattern.
 
 ### Cross-Cutting: team-architect.md Body Instructions
 
-In addition to fixing `team-architect.md`'s own frontmatter description, the **body** (system prompt after the closing `---`) contains generation instructions on lines 101-130 that teach the LLM to produce `<example>` blocks. These instructions must be updated to teach the `description: |` format instead.
+In addition to fixing `team-architect.md`'s own frontmatter description, the **body** (system prompt after the closing `---`) contains generation instructions that teach the LLM to produce `<example>` blocks. These instructions must be updated to teach the `description: |` format instead.
 
-Specific sections to update:
-- Phase 4 template example (line 107-121)
-- "Critical format rules" section (lines 126-136)
-- Agent Quality Standards (lines 159-168)
+Specific sections to update (referenced by heading, not line numbers):
+- "Phase 4: Agent Generation" — template example code block
+- "Critical format rules" — rule #2 referencing `<example>` blocks
+- "Agent Quality Standards" — rule #2 referencing `<example>` blocks
 
 ## Acceptance Criteria
 
 - [ ] All 4 plugin agent files use `description: |` with keyword-rich prose
-- [ ] All 6 templates in `agent-templates.md` use `description: |` format
-- [ ] `SKILL.md` teaches `description: |` as the correct format
+- [ ] All 5 templates in `agent-templates.md` use `description: |` format
+- [ ] All 7 locations in `SKILL.md` updated to teach `description: |` as the correct format
 - [ ] All 3 example files use `description: |` format
-- [ ] `generate-debugger.md` template uses `description: |` format
+- [ ] Both locations in `generate-debugger.md` use `description: |` format
 - [ ] `team-architect.md` body instructions teach `description: |` format
-- [ ] No `<example>` blocks appear in any `description:` field (frontmatter or template)
+- [ ] All 5 example agents in `docs/app/.claude/agents/` use `description: |` format
+- [ ] Agent code block in `docs/jira-integration-roadmap.md` uses `description: |` format
+- [ ] No `<example>` blocks appear in any `description:` field within `agent-team-creator/` or `docs/` (frontmatter or template code blocks)
 - [ ] Generate a test agent team and verify agents appear in `claude agents` under "Project agents"
 - [ ] Plugin agents still load correctly at user level
 
