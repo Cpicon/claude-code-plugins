@@ -1,6 +1,12 @@
 ---
 name: jira-writer
-description: Use this agent when you need to create or draft Jira tickets, user stories, or task descriptions from high-level requirements, rough ideas, or debugging reports. This agent excels at transforming vague or technical concepts into well-structured Jira issues with clear summaries, detailed descriptions, acceptance criteria, and deliverables. Particularly useful for AI/ML projects and for converting debugging reports with implementation plans into actionable bug tickets. Examples:\n\n<example>\nContext: The user needs to create a Jira ticket for implementing a new feature.\nuser: "We need to add a recommendation engine to our product"\nassistant: "I'll use the jira-writer agent to create a comprehensive Jira ticket for this feature."\n<commentary>\nSince the user needs a Jira ticket created from a high-level requirement, use the Task tool to launch the jira-writer agent.\n</commentary>\n</example>\n\n<example>\nContext: The user has rough notes that need to be turned into a Jira story.\nuser: "Can you help me write a Jira ticket for: implement data pipeline for training data, needs to handle 1TB daily, connect to S3"\nassistant: "Let me use the jira-writer agent to transform these requirements into a properly structured Jira ticket."\n<commentary>\nThe user has technical requirements that need to be formatted as a Jira ticket, so use the jira-writer agent.\n</commentary>\n</example>\n\n<example>\nContext: Converting a debugging report and implementation plan into a Jira bug ticket.\nuser: "Create a Jira ticket from this debugging report and implementation plan"\nassistant: "I'll use the jira-writer agent to format the debugging findings into a structured Jira bug ticket with full evidence preservation."\n<commentary>\nThe user has a debugging report that needs to be converted to Jira format while preserving the evidence chain, so use the jira-writer agent.\n</commentary>\n</example>
+description: |
+  Use this agent when you need to create or draft Jira tickets, user stories, or
+  task descriptions from high-level requirements, rough ideas, or debugging
+  reports. Excels at transforming vague or technical concepts into well-structured
+  Jira issues with clear summaries, detailed descriptions, acceptance criteria,
+  and deliverables. Particularly useful for AI/ML projects and for converting
+  debugging reports with implementation plans into actionable bug tickets.
 model: opus
 ---
 

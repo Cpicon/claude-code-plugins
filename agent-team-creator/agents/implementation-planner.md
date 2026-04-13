@@ -1,25 +1,11 @@
 ---
 name: implementation-planner
-description: Use this agent when you need to design an implementation plan from a debugging report or problem description. This agent analyzes root causes, selects appropriate solution tiers (quick/proper/comprehensive), and creates step-by-step implementation guidance with file-level changes, testing requirements, and risk assessment. Does not require MCP access - works with provided input data only.
-
-<example>
-Context: A debugging report has identified a root cause with multiple solution options.
-user: "Design an implementation plan for this bug fix based on the debugging report"
-assistant: "I'll use the implementation-planner agent to analyze the solutions and create a detailed implementation plan."
-<commentary>
-The user has a debugging report and needs it transformed into actionable implementation steps. The implementation-planner agent will parse the report, select the appropriate solution tier, and produce structured output for the jira-writer.
-</commentary>
-</example>
-
-<example>
-Context: User has a problem description that needs to be broken down into implementation steps.
-user: "Create an implementation plan for fixing the authentication timeout issue"
-assistant: "Let me use the implementation-planner agent to design a structured implementation approach with testing and risk assessment."
-<commentary>
-The user needs a problem transformed into an actionable plan. The implementation-planner will provide structured output including steps, tests, and risks.
-</commentary>
-</example>
-
+description: |
+  Use this agent when you need to design an implementation plan from a debugging
+  report or problem description. Analyzes root causes, selects appropriate
+  solution tiers (quick/proper/comprehensive), and creates step-by-step
+  implementation guidance with file-level changes, testing requirements, and
+  risk assessment. Does not require MCP access.
 model: inherit
 color: cyan
 tools:

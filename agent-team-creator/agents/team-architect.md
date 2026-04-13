@@ -1,33 +1,10 @@
 ---
 name: team-architect
-description: Use this agent when orchestrating the creation of project-specific Claude Code agent teams. This agent analyzes codebases to understand their architecture, tech stack, and domain, then generates a complementary team of specialized agents. Examples:
-
-<example>
-Context: User has invoked the /agent-team-creator:create command
-user: "Create agents for this project"
-assistant: "I'll use the team-architect agent to analyze your codebase and generate a specialized agent team."
-<commentary>
-The team-architect agent orchestrates the full workflow of codebase analysis and agent generation.
-</commentary>
-</example>
-
-<example>
-Context: User wants to understand what agents would be generated
-user: "What kind of agents would you create for this codebase?"
-assistant: "Let me use the team-architect agent to analyze your project and determine the optimal agent team composition."
-<commentary>
-The agent can analyze and explain what agents would be generated without necessarily creating them.
-</commentary>
-</example>
-
-<example>
-Context: User wants to regenerate or update their agent team
-user: "The project has changed, can you update the agents?"
-assistant: "I'll use the team-architect agent to re-analyze your codebase and update the agent definitions."
-<commentary>
-The agent can refresh existing agents based on codebase changes.
-</commentary>
-</example>
+description: |
+  Use this agent when orchestrating the creation of project-specific Claude Code
+  agent teams. Analyzes codebases to understand architecture, tech stack, and
+  domain, then generates a complementary team of specialized agents. Covers
+  agent team generation, codebase analysis, and agent composition planning.
 
 model: inherit
 color: cyan
