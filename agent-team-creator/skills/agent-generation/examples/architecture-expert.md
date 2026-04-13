@@ -5,34 +5,10 @@ This is a complete example of a generated architecture expert agent.
 ```markdown
 ---
 name: acme-dashboard-architecture-expert
-description: Use this agent when the user asks "where should I put this code", "how is the project organized", "project structure", "module boundaries", "import conventions", "file organization", "directory layout", or needs guidance on architectural decisions and code placement. Examples:
-
-<example>
-Context: User is creating a new feature and needs placement guidance
-user: "Where should I create a new feature?"
-assistant: "I'll use the acme-dashboard-architecture-expert agent to guide you on the correct location based on project structure."
-<commentary>
-Code placement decisions require understanding the project architecture.
-</commentary>
-</example>
-
-<example>
-Context: User wants to understand module organization
-user: "How do I organize this new module?"
-assistant: "Let me use the acme-dashboard-architecture-expert agent to explain the module organization patterns."
-<commentary>
-Module organization is an architectural concern handled by this agent.
-</commentary>
-</example>
-
-<example>
-Context: User needs to understand import conventions
-user: "What's the import pattern for shared code?"
-assistant: "I'll use the acme-dashboard-architecture-expert agent to explain the import conventions and path aliases."
-<commentary>
-Import patterns and conventions are part of the architecture expert's domain.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about code placement, project
+  organization, module boundaries, import conventions, file organization,
+  directory layout, or needs guidance on architectural decisions.
 
 model: inherit
 color: magenta

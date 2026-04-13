@@ -72,7 +72,9 @@ Create `project-debugger.md` in `.claude/agents/` with:
 ```markdown
 ---
 name: project-debugger
-description: [Project-specific description with trigger examples]
+description: |
+  [Project-specific description using keyword-rich prose.
+  List trigger phrases and capabilities covered by this agent.]
 model: inherit
 color: red
 tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
@@ -264,7 +266,10 @@ For a Next.js + Express + PostgreSQL project with existing agents `frontend-expe
 ```markdown
 ---
 name: project-debugger
-description: Use this agent when debugging issues in this Next.js/Express/PostgreSQL application...
+description: |
+  Use this agent when debugging issues in this Next.js/Express/PostgreSQL
+  application. Coordinates specialist agents to diagnose bugs, errors, and
+  unexpected behavior across the full stack.
 model: inherit
 color: red
 ---
