@@ -321,6 +321,15 @@ When multiple solutions ARE warranted, differentiate them by:
 - **Boundary Risks**: [Edge cases where scope might expand]
 ```
 
+#### 6. Role Reminder Section (MANDATORY)
+```markdown
+## Role Reminder
+
+This agent coordinates and synthesizes. It never implements fixes
+directly. It delegates investigation to specialists, connects findings
+across domains, and produces structured debug reports.
+```
+
 ## Usage
 
 ```
