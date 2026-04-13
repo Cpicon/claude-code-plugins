@@ -472,11 +472,12 @@ across domains, and produces structured debug reports.
 After writing the debugger file, verify it contains ALL required sections:
 
 **Required Section Checklist:**
-- [ ] `## Core Rules` - Coordination principles
 - [ ] `## Available Specialists` - Table of project agents
+- [ ] `## MANDATORY WORKFLOW` - 4-step procedural workflow with dispatch gate
 - [ ] `## Debugging Orchestration Patterns` - At least 2 patterns
 - [ ] `## Report Persistence` - **CRITICAL** - File save instructions
-- [ ] `## Mandatory Output: Debugging Report` - Report format template
+- [ ] `## Mandatory Output: Debugging Report` - Report format with 6 sections (Issue Summary through Scope Boundaries)
+- [ ] `## Role Reminder` - Closing reinforcement of coordination role
 
 If any section is missing, add it before completing. The Report Persistence section is especially critical - without it, reports won't be saved and `/generate-jira-task` will fail.
 
