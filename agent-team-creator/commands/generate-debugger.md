@@ -22,9 +22,19 @@ Generate a debugger agent specifically tailored to this project based on availab
 
 ### Phase 1: Discovery
 
-1. **Scan Existing Project Agents**
-   - Read all `.md` files in `.claude/agents/`
-   - Extract each agent's name, description, expertise, and capabilities
+1. **Discover Existing Project Agents**
+   - Run **Glob** on `.claude/agents/*.md` to list all agent files
+   - If **no agent files are found**, stop immediately and tell the user:
+     ```
+     No specialist agents found in .claude/agents/. The debugger requires
+     a team of specialists to delegate to.
+
+     Run /agent-team-creator:generate-agent-team first to create your
+     project's specialist agents, then re-run /generate-debugger.
+     ```
+   - Read each discovered agent file
+   - Extract each agent's name, description, expertise, and tools
+   - Run **Grep** on `.claude/agents/` for `name:`, `description:`, `tools:` to validate agents are well-formed
    - Build a registry of available specialists
 
 2. **Analyze Project Context**
