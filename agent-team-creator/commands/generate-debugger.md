@@ -118,16 +118,76 @@ The generated debugger agent MUST include ALL of the following:
 ...
 ```
 
-#### 2. Core Rules Section (MANDATORY)
+#### 2. Mandatory Procedural Workflow Section (MANDATORY -- replaces Core Rules)
 ```markdown
-## Core Rules
+## MANDATORY WORKFLOW
 
-- **You coordinate, not implement** - Delegate investigation to specialists, never attempt fixes directly
-- **Evidence-based only** - Require specialists to provide file paths, line numbers, and code references
-- **Synthesize don't parrot** - Connect findings across specialists, identify patterns, don't just repeat what each agent said
-- **Consider system-wide impact** - Always analyze how one component's issue affects other parts of the system
-- **Document the trail** - Track which agents were consulted and what each contributed
+You MUST follow these 4 steps in order. You CANNOT skip or reorder steps.
+You CANNOT proceed to Step 3 without completing Step 2.
+
+### Step 1: Understand the Problem
+Read the user's message and any referenced files/logs to understand what's being reported.
+You MAY use Read/Grep here for quick context only.
+
+### Step 2: Dispatch Specialists (REQUIRED -- DO NOT SKIP)
+You MUST use the Agent tool to dispatch at least one specialist
+BEFORE you write any analysis.
+
+If you find yourself about to write "Root Cause" or "Analysis"
+without having dispatched an Agent, STOP and dispatch one first.
+
+#### When to use Single Dispatch
+Use when debugging follows a linear flow: a request-response chain,
+a data transformation pipeline, or a single component failure.
+
+**Example:**
+Dispatch the backend specialist to trace a request flow:
+
+Agent tool call:
+- subagent_type: "{project-slug}-backend-expert"
+- prompt: "Investigate: The /api/users endpoint returns 500.
+  Trace the request from route handler through middleware to
+  the database query. Return: affected files with line numbers,
+  error chain, and your assessment of the root cause."
+
+#### When to use Parallel Dispatch
+Use when the issue spans multiple services or domains:
+- One service is down while another is up (e.g., backend down, database up)
+- The user explicitly mentions several services are involved
+- Logs show errors across multiple components
+
+**Example:**
+Dispatch backend and database specialists in parallel:
+
+Agent call 1:
+- subagent_type: "{project-slug}-backend-expert"
+- prompt: "Investigate: API returning 503. Check service health,
+  connection pools, and error handlers. Return: affected files
+  with line numbers, error traces, and whether the backend
+  is the origin of the failure."
+
+Agent call 2:
+- subagent_type: "{project-slug}-database-expert"
+- prompt: "Investigate: Database connectivity during API 503.
+  Check connection config, pool exhaustion, query timeouts.
+  Return: connection status evidence, slow query logs,
+  and whether the database is contributing to the failure."
+
+### Step 3: Synthesize
+AFTER all dispatched specialists return, combine their findings
+into the full Debugging Report format below (all 6 sections:
+Issue Summary, Investigation Trail, Root Cause, Impact & Solutions,
+Version Impact, Scope Boundaries).
+
+### Step 4: Save Report
+Save the completed debugging report to a file and inform the user.
 ```
+
+> **NOTE to generator**: Replace `{project-slug}-backend-expert` and
+> `{project-slug}-database-expert` in the dispatch examples above with
+> the actual agent names discovered in Phase 1 (e.g., `acme-backend-expert`).
+> Use the `[square bracket]` convention for other placeholders that the
+> generator fills in dynamically.
 
 #### 3. Orchestration Patterns Section
 ```markdown
