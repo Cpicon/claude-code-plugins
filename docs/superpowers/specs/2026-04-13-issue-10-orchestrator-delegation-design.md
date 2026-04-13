@@ -38,12 +38,16 @@ tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
 to:
 
 ```yaml
-tools: Agent(specialist1, specialist2, ...), Read, Write, Grep, Glob, Bash, Task
+tools: Agent(specialist1, specialist2, ...), Read, Write, Grep, Glob, Bash
 ```
 
 Where `specialist1, specialist2, ...` are the **actual agent names** discovered in Phase 1 (e.g., `Agent(acme-react-expert, acme-backend-expert, acme-database-expert)`).
 
-**Rationale:** Per the [official Anthropic documentation](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned), the `Agent(agent_type)` syntax in the `tools` field creates an allowlist restricting which subagents the main-thread agent can spawn. If `Agent` is omitted entirely, the agent **cannot spawn any subagents** when running via `claude --agent`. The `Task(...)` alias also works (renamed in v2.1.63).
+**Format note:** The `tools` field switches from JSON array syntax (`["Tool1", "Tool2"]`) to bare comma-separated syntax (`Tool1, Tool2`). Both formats are valid per the official docs; the bare format is used because it matches the primary examples in the Anthropic documentation and integrates cleanly with the `Agent(...)` syntax.
+
+**`Task` removal:** The existing `Task` entry is removed. In Claude Code v2.1.63, the `Task` tool was renamed to `Agent`. The `Agent(specialist1, ...)` entry replaces `Task` and serves as both the subagent spawning mechanism and an allowlist restricting which agents can be dispatched. Existing `Task(...)` references still work as aliases if needed.
+
+**Rationale:** Per the [official Anthropic documentation](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned), the `Agent(agent_type)` syntax in the `tools` field creates an allowlist restricting which subagents the main-thread agent can spawn. If `Agent` is omitted entirely, the agent **cannot spawn any subagents** when running via `claude --agent`.
 
 ### 2. Phase 1 Guard — Explicit Agent Discovery
 
@@ -128,10 +132,12 @@ Agent call 2:
 
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
-into the Investigation Trail format below.
+into the full Debugging Report format below (all 5 sections:
+Investigation Trail, Root Cause, Impact & Solutions, Version Impact,
+Scope Boundaries).
 
-### Step 4: Report and Save
-Write the debugging report using the mandatory format and save it.
+### Step 4: Save Report
+Save the completed debugging report to a file and inform the user.
 ```
 
 **Key insight:** Procedural gates ("you must do Y before Z") work far better than negative instructions ("don't do X") for controlling model behavior.
@@ -163,7 +169,12 @@ across domains, and produces structured debug reports.
 
 **File:** `agent-team-creator/commands/generate-debugger.md` (Phase 3 template, report section)
 
-The mandatory report format consolidates investigation data into a single table and restructures the output:
+The mandatory report format consolidates investigation data into a single table and restructures the output. Compared to the current format, the following fields are intentionally dropped:
+
+- **Issue Summary** (Reported Issue, Affected Components) — redundant with the user's original message, which the debugger already reads in Step 1
+- **Contributing Factors** — merged into Root Cause; a separate field added no value
+- **Side Effects & Warnings** — covered by Scope Boundaries (Section 5)
+- **Agents Used** (Primary/Supporting/Unused) — replaced by the Investigation Trail table, which captures agent-by-agent findings and evidence in one place
 
 ```markdown
 ## Mandatory Output: Debugging Report
@@ -230,7 +241,7 @@ When multiple solutions ARE warranted, differentiate them by:
 | File | Reason |
 |------|--------|
 | `agent-team-creator/skills/agent-generation/*` | Scoped to debugger only; no general orchestrator pattern |
-| `agent-team-creator/commands/generate-jira-task.md` | Report format changes are backward-compatible |
+| `agent-team-creator/commands/generate-jira-task.md` | Report format changes are backward-compatible. `generate-jira-task` reads reports via Glob/Grep and extracts content by section headers. The new headers (`Investigation Trail`, `Root Cause Analysis`, `Impact Assessment & Solutions`, `Version Impact`, `Scope Boundaries`) do not conflict with any existing parsing logic, which keys on `### Root Cause Analysis`, `### Solutions`, and YAML frontmatter — all of which are preserved or superseded by compatible names |
 
 ---
 
@@ -244,4 +255,5 @@ When multiple solutions ARE warranted, differentiate them by:
 - [ ] Template includes role definition at top and role reminder at bottom of system prompt
 - [ ] Report format includes: investigation trail, root cause, impact & solutions, version impact, scope boundaries
 - [ ] Solutions section does not force three tiers; differentiates by architecture, business impact, trade-offs, effort
+- [ ] `team-architect.md` body includes guidance that orchestrator agents need `Agent(...)` in tools field
 - [ ] Generate a test debugger and verify it dispatches specialists when run via `claude --agent project-debugger`
