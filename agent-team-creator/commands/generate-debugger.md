@@ -344,11 +344,13 @@ Or with an issue to debug immediately after generation:
 ## Output
 
 Generates `project-debugger.md` in `.claude/agents/` with:
-- Complete knowledge of all existing project agents
-- Core rules preventing direct implementation
+- `Agent(specialist1, ...)` in tools field for subagent dispatching
+- Role definition opening (coordination, not implementation)
+- Mandatory 4-step procedural workflow gating analysis behind dispatch
 - Orchestration patterns adapted to project architecture
 - **Report persistence instructions** (saves to `.claude/reports/debugging/`)
-- Mandatory report format with agent trail
+- Mandatory report format with investigation trail
+- Role reminder closing reinforcement
 
 ## Example Output Structure
 
