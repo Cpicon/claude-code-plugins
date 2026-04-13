@@ -132,9 +132,9 @@ Agent call 2:
 
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
-into the full Debugging Report format below (all 5 sections:
-Investigation Trail, Root Cause, Impact & Solutions, Version Impact,
-Scope Boundaries).
+into the full Debugging Report format below (all 6 sections:
+Issue Summary, Investigation Trail, Root Cause, Impact & Solutions,
+Version Impact, Scope Boundaries).
 
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
@@ -171,24 +171,29 @@ across domains, and produces structured debug reports.
 
 The mandatory report format consolidates investigation data into a single table and restructures the output. Compared to the current format, the following fields are intentionally dropped:
 
-- **Issue Summary** (Reported Issue, Affected Components) — redundant with the user's original message, which the debugger already reads in Step 1
 - **Contributing Factors** — merged into Root Cause; a separate field added no value
-- **Side Effects & Warnings** — covered by Scope Boundaries (Section 5)
+- **Side Effects & Warnings** — covered by Scope Boundaries (Section 6)
 - **Agents Used** (Primary/Supporting/Unused) — replaced by the Investigation Trail table, which captures agent-by-agent findings and evidence in one place
+
+**Retained for backward compatibility:** `Issue Summary` is kept because `generate-jira-task.md` (line 213) and `update-generated-report.md` (lines 250, 263) parse this header by name. Removing it would trigger missing-section warnings and degrade downstream command behavior.
 
 ```markdown
 ## Mandatory Output: Debugging Report
 
-### 1. Investigation Trail
+### 1. Issue Summary
+- **Reported Issue**: [Original problem description]
+- **Affected Components**: [List of components involved]
+
+### 2. Investigation Trail
 | Agent Consulted | Findings | Evidence (File:Line) |
 |-----------------|----------|----------------------|
 | [agent-name] | [What they discovered] | [file:line references] |
 
-### 2. Root Cause Analysis
+### 3. Root Cause Analysis
 - **Root Cause**: [Technical explanation]
 - **Evidence Chain**: [How evidence led to this conclusion]
 
-### 3. Impact Assessment & Solutions
+### 4. Impact Assessment & Solutions
 
 #### Impact
 - **Direct Effects**: [Immediate consequences]
@@ -216,12 +221,12 @@ When multiple solutions ARE warranted, differentiate them by:
 - **Trade-offs**: [What you gain vs. what you give up]
 - **Effort**: [Low / Medium / High]
 
-### 4. Version Impact
+### 5. Version Impact
 - **Affected Versions**: [Which versions exhibit the bug]
 - **Introduced In**: [Commit/release where it appeared, if identifiable]
 - **Fix Compatibility**: [Will the fix require version bumps or migrations]
 
-### 5. Scope Boundaries
+### 6. Scope Boundaries
 - **In Scope**: [Components/services directly affected]
 - **Out of Scope**: [Related areas NOT affected]
 - **Boundary Risks**: [Edge cases where scope might expand]
@@ -241,7 +246,8 @@ When multiple solutions ARE warranted, differentiate them by:
 | File | Reason |
 |------|--------|
 | `agent-team-creator/skills/agent-generation/*` | Scoped to debugger only; no general orchestrator pattern |
-| `agent-team-creator/commands/generate-jira-task.md` | Report format changes are backward-compatible. `generate-jira-task` reads reports via Glob/Grep and extracts content by section headers. The new headers (`Investigation Trail`, `Root Cause Analysis`, `Impact Assessment & Solutions`, `Version Impact`, `Scope Boundaries`) do not conflict with any existing parsing logic, which keys on `### Root Cause Analysis`, `### Solutions`, and YAML frontmatter — all of which are preserved or superseded by compatible names |
+| `agent-team-creator/commands/generate-jira-task.md` | Backward-compatible. `generate-jira-task` validates reports by checking for `Issue Summary`, `Root Cause`/`Root Cause Analysis`, and `Solutions`/`Recommended Fix` headers (lines 213-215). The new format retains `Issue Summary` (Section 1) and `Root Cause Analysis` (Section 3). `Solutions` appears as a level-4 header inside `### 4. Impact Assessment & Solutions` — the parent level-3 header contains the word "Solutions", which satisfies the flexible header matching |
+| `agent-team-creator/commands/update-generated-report.md` | Backward-compatible. `update-generated-report` references `Issue Summary` (lines 250, 263) and `Affected Components` (line 248) — both retained in the new format's Section 1 |
 
 ---
 
@@ -253,7 +259,7 @@ When multiple solutions ARE warranted, differentiate them by:
 - [ ] Template uses mandatory 4-step procedural workflow instead of "Core Rules"
 - [ ] Template includes single dispatch and parallel dispatch examples with actual agent names
 - [ ] Template includes role definition at top and role reminder at bottom of system prompt
-- [ ] Report format includes: investigation trail, root cause, impact & solutions, version impact, scope boundaries
+- [ ] Report format includes: issue summary, investigation trail, root cause, impact & solutions, version impact, scope boundaries
 - [ ] Solutions section does not force three tiers; differentiates by architecture, business impact, trade-offs, effort
 - [ ] `team-architect.md` body includes guidance that orchestrator agents need `Agent(...)` in tools field
 - [ ] Generate a test debugger and verify it dispatches specialists when run via `claude --agent project-debugger`

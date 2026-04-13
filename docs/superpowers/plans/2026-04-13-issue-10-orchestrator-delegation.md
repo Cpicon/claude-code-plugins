@@ -58,7 +58,7 @@ Find the section starting with `### Phase 1: Discovery` (original line 23). Repl
 
 - [ ] **Step 2: Verify the edit**
 
-Read the Phase 1 section and confirm:
+Read the `### Phase 1: Discovery` section and confirm:
 - Glob on `.claude/agents/*.md` is the first action
 - Guard (stop + prompt message) fires when no agent files are found
 - Grep validation step is present
@@ -80,7 +80,9 @@ git commit -m "fix(#10): add Phase 1 agent discovery guard with Glob/Grep"
 
 - [ ] **Step 1: Replace the Phase 3 template code block**
 
-Find the section `### Phase 3: Generate the Debugger Agent`. Within it, find the fenced code block that starts with ```` ```markdown ``` `` and contains the debugger frontmatter template (with `tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]`). Replace that entire code block with:
+Find the section `### Phase 3: Generate the Debugger Agent`. Within it, find the fenced code block that contains the debugger frontmatter template (the one with `tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]`). Replace **only that code block** (from its opening ``` to its closing ```). Preserve the `> **CRITICAL**:` note paragraph immediately after the code block — it is NOT part of the code block and must remain.
+
+Replace the code block with:
 
 ````markdown
 ```markdown
@@ -193,13 +195,19 @@ Agent call 2:
 
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
-into the full Debugging Report format below (all 5 sections:
-Investigation Trail, Root Cause, Impact & Solutions, Version Impact,
-Scope Boundaries).
+into the full Debugging Report format below (all 6 sections:
+Issue Summary, Investigation Trail, Root Cause, Impact & Solutions,
+Version Impact, Scope Boundaries).
 
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
 ```
+
+> **NOTE to generator**: Replace `{project-slug}-backend-expert` and
+> `{project-slug}-database-expert` in the dispatch examples above with
+> the actual agent names discovered in Phase 1 (e.g., `acme-backend-expert`).
+> Use the `[square bracket]` convention for other placeholders that the
+> generator fills in dynamically.
 ````
 
 - [ ] **Step 2: Verify the edit**
@@ -208,7 +216,8 @@ Read the updated section and confirm:
 - Section title says "Mandatory Procedural Workflow" not "Core Rules"
 - 4 steps are present in order
 - Single dispatch and parallel dispatch examples are present with `subagent_type` references
-- Step 3 references all 5 report sections by name
+- Step 3 references all 6 report sections by name
+- The generator note about resolving `{project-slug}` placeholders is present after the code block
 
 - [ ] **Step 3: Commit**
 
@@ -243,16 +252,20 @@ created: {YYYY-MM-DD HH:mm}
 last_updated: {YYYY-MM-DD HH:mm}
 ---
 
-### 1. Investigation Trail
+### 1. Issue Summary
+- **Reported Issue**: [Original problem description]
+- **Affected Components**: [List of components involved]
+
+### 2. Investigation Trail
 | Agent Consulted | Findings | Evidence (File:Line) |
 |-----------------|----------|----------------------|
 | [agent-name] | [What they discovered] | [file:line references] |
 
-### 2. Root Cause Analysis
+### 3. Root Cause Analysis
 - **Root Cause**: [Technical explanation]
 - **Evidence Chain**: [How evidence led to this conclusion]
 
-### 3. Impact Assessment & Solutions
+### 4. Impact Assessment & Solutions
 
 #### Impact
 - **Direct Effects**: [Immediate consequences]
@@ -280,12 +293,12 @@ When multiple solutions ARE warranted, differentiate them by:
 - **Trade-offs**: [What you gain vs. what you give up]
 - **Effort**: [Low / Medium / High]
 
-### 4. Version Impact
+### 5. Version Impact
 - **Affected Versions**: [Which versions exhibit the bug]
 - **Introduced In**: [Commit/release where it appeared, if identifiable]
 - **Fix Compatibility**: [Will the fix require version bumps or migrations]
 
-### 5. Scope Boundaries
+### 6. Scope Boundaries
 - **In Scope**: [Components/services directly affected]
 - **Out of Scope**: [Related areas NOT affected]
 - **Boundary Risks**: [Edge cases where scope might expand]
@@ -295,10 +308,11 @@ When multiple solutions ARE warranted, differentiate them by:
 - [ ] **Step 2: Verify the edit**
 
 Read the updated section and confirm:
-- 5 sections: Investigation Trail, Root Cause, Impact & Solutions, Version Impact, Scope Boundaries
+- 6 sections: Issue Summary, Investigation Trail, Root Cause, Impact & Solutions, Version Impact, Scope Boundaries
+- Issue Summary retains `Reported Issue` and `Affected Components` fields (required by `generate-jira-task.md` and `update-generated-report.md`)
 - Solutions section does NOT force three tiers
 - Solutions differentiation criteria: architectural decisions, business impact, trade-offs, effort
-- No "Issue Summary", "Contributing Factors", "Side Effects & Warnings", or "Agents Used" sections
+- No "Contributing Factors", "Side Effects & Warnings", or "Agents Used" sections
 
 - [ ] **Step 3: Commit**
 
@@ -406,7 +420,7 @@ without having dispatched an Agent, STOP and dispatch one first.
 
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
-into the full Debugging Report format (all 5 sections).
+into the full Debugging Report format (all 6 sections).
 
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
@@ -470,7 +484,7 @@ Tell the user:
 
 ## Mandatory Output: Debugging Report
 
-[Full report format with all 5 sections - MUST save to file after producing]
+[Full report format with all 6 sections - MUST save to file after producing]
 
 ## Role Reminder
 
@@ -514,7 +528,7 @@ Find the section `### Phase 5: Verify Generated Debugger`. Within it, find the `
 - [ ] `## MANDATORY WORKFLOW` - 4-step procedural workflow with dispatch gate
 - [ ] `## Debugging Orchestration Patterns` - At least 2 patterns
 - [ ] `## Report Persistence` - **CRITICAL** - File save instructions
-- [ ] `## Mandatory Output: Debugging Report` - Report format with 5 sections
+- [ ] `## Mandatory Output: Debugging Report` - Report format with 6 sections (Issue Summary through Scope Boundaries)
 - [ ] `## Role Reminder` - Closing reinforcement of coordination role
 
 If any section is missing, add it before completing. The Report Persistence section is especially critical - without it, reports won't be saved and `/generate-jira-task` will fail.
@@ -587,6 +601,8 @@ Find the section `## Agent Quality Standards`. After item 7 (`7. **Provide guida
 8. **Include `Agent(...)` for orchestrators** - If the agent coordinates other agents (e.g., a debugger), its `tools` field must include `Agent(agent1, agent2, ...)` listing the agents it can dispatch. Without this, the agent cannot spawn subagents when running via `claude --agent`. See the [official docs](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned).
 ````
 
+> **Note:** The Phase 4 agent generation template in this same file (around line 120) still uses `"Task"` in its tools array. This is the old name (renamed to `Agent` in v2.1.63) and still works as an alias. Updating it is out of scope for this fix — Issue #9 or a separate cleanup may address it.
+
 - [ ] **Step 2: Verify the edit**
 
 Read the Agent Quality Standards section and confirm:
@@ -614,7 +630,7 @@ git diff main...HEAD --stat
 git log --oneline main..HEAD
 ```
 
-Confirm all 9 commits are present and only 2 files were modified.
+Confirm 9 implementation commits are present (one per task, Tasks 1-9). The branch also has earlier commits for spec and plan documents — these are expected and should not be counted as implementation commits. Only `generate-debugger.md` and `team-architect.md` should be modified by the implementation commits.
 
 - [ ] **Step 2: Read the final `generate-debugger.md`**
 
@@ -623,8 +639,9 @@ Read the complete file and verify against the acceptance criteria:
 - Phase 3 template has `Agent(...)` in tools
 - Phase 4 Section 2 has procedural workflow (not Core Rules)
 - Phase 4 Section 2 has single + parallel dispatch examples
+- Phase 4 Section 2 has generator note about resolving `{project-slug}` to actual agent names
 - Phase 4 Section 6 has Role Reminder
-- Report format has 5 sections (no forced three-tier solutions)
+- Report format has 6 sections (Issue Summary through Scope Boundaries; no forced three-tier solutions)
 - Phase 5 checklist includes MANDATORY WORKFLOW and Role Reminder
 - Example output reflects all changes with Role Reminder as last section
 - Role definition is at the top of the example system prompt
