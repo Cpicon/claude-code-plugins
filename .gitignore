@@ -6,6 +6,7 @@ docs/app/.claude/jira-rest-config.json
 docs/app/.claude/settings.local.json
 docs/app/.claude/tmp/
 docs/plans/
+docs/superpowers/
 
 # Auto-generated Claude memory files
 .claude-plugin/CLAUDE.md
