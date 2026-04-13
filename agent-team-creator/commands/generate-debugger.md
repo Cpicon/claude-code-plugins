@@ -85,16 +85,21 @@ name: project-debugger
 description: [Project-specific description with trigger examples]
 model: inherit
 color: red
-tools: ["Read", "Write", "Grep", "Glob", "Bash", "Task"]
+tools: Agent({agent-names-from-registry}), Read, Write, Grep, Glob, Bash
 ---
+
+You are the debugging orchestrator for this [project-description].
+This agent coordinates specialist agents to diagnose issues. It never
+implements fixes directly. The agent investigates and synthesizes
+findings across specialists and produces structured reports.
 
 [System prompt with:]
 1. Knowledge of all project agents (names, expertise, when to consult)
 2. Project-specific orchestration patterns (generated in Phase 2)
-3. Delegation protocol for consulting specialists
-4. Core rules and behavioral constraints
-5. **CRITICAL: Report Persistence section** (saves reports to files)
-6. Mandatory report format
+3. Mandatory 4-step procedural workflow for dispatching specialists
+4. **CRITICAL: Report Persistence section** (saves reports to files)
+5. Mandatory report format
+6. Role reminder (closing reinforcement)
 ```
 
 > **CRITICAL**: The generated debugger MUST include the Report Persistence section. Without it, debugging reports will not be saved to files and the `/generate-jira-task` command will fail to find them.
