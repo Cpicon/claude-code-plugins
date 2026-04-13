@@ -167,6 +167,7 @@ Every generated agent MUST:
 5. **Be complementary** - No overlapping responsibilities with other agents
 6. **Include real knowledge** - Embed actual conventions, patterns, and structures in the body
 7. **Provide guidance** - Help users follow project standards
+8. **Include `Agent(...)` for orchestrators** - If the agent coordinates other agents (e.g., a debugger), its `tools` field must include `Agent(agent1, agent2, ...)` listing the agents it can dispatch. Without this, the agent cannot spawn subagents when running via `claude --agent`. See the [official docs](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned).
 
 ## Example Output
 
