@@ -269,47 +269,56 @@ created: {YYYY-MM-DD HH:mm}
 last_updated: {YYYY-MM-DD HH:mm}
 ---
 
-### Issue Summary
+### 1. Issue Summary
 - **Reported Issue**: [Original problem description]
 - **Affected Components**: [List of components involved]
 
-### Investigation Trail
-| Agent Consulted | Findings | Evidence |
-|-----------------|----------|----------|
-| [agent-name] | [What they found] | [File:line references] |
-...
+### 2. Investigation Trail
+| Agent Consulted | Findings | Evidence (File:Line) |
+|-----------------|----------|----------------------|
+| [agent-name] | [What they discovered] | [file:line references] |
 
-### Root Cause Analysis
-- **Root Cause**: [Technical explanation of the core issue]
-- **Contributing Factors**: [Other conditions that enabled the bug]
-- **Evidence Chain**: [How the evidence led to this conclusion]
+### 3. Root Cause Analysis
+- **Root Cause**: [Technical explanation]
+- **Evidence Chain**: [How evidence led to this conclusion]
 
-### Impact Assessment
-- **Direct Effects**: [Immediate consequences of the bug]
-- **Side Effects & Warnings**: [Potential ripple effects on other components]
-- **Risk Level**: [Critical/High/Medium/Low]
+### 4. Impact Assessment & Solutions
 
-### Solutions (Ordered by Effort)
+#### Impact
+- **Direct Effects**: [Immediate consequences]
+- **Risk Level**: Critical / High / Medium / Low
 
-#### 1. Quick Fix (Low Effort)
+#### Solutions
+
+Provide one or more solutions. Multiple solutions are only needed when
+they represent genuinely different approaches with distinct trade-offs.
+If a change works on its own without architectural trade-offs, list it
+as a single solution -- do not artificially split into quick/proper/comprehensive.
+
+When multiple solutions ARE warranted, differentiate them by:
+- **Architectural decisions**: Does this change the system's structure?
+- **Business impact**: What does each approach enable or limit?
+- **Trade-offs**: What are you giving up with each option?
+- **Effort & resources**: Team time, dependencies, migration cost
+
+**Format per solution:**
+#### Solution [N]: [Name]
 - **Change**: [What to modify]
-- **Files**: [Specific files to change]
-- **Trade-offs**: [What this doesn't solve]
+- **Files**: [Specific files]
+- **Architectural impact**: [None / Minor / Significant]
+- **Business impact**: [What this enables or limits]
+- **Trade-offs**: [What you gain vs. what you give up]
+- **Effort**: [Low / Medium / High]
 
-#### 2. Proper Fix (Medium Effort)
-- **Change**: [What to modify]
-- **Files**: [Specific files to change]
-- **Benefits**: [Why this is better than quick fix]
+### 5. Version Impact
+- **Affected Versions**: [Which versions exhibit the bug]
+- **Introduced In**: [Commit/release where it appeared, if identifiable]
+- **Fix Compatibility**: [Will the fix require version bumps or migrations]
 
-#### 3. Comprehensive Fix (High Effort)
-- **Change**: [What to modify]
-- **Files**: [Specific files to change]
-- **Long-term Benefits**: [Architectural improvements]
-
-### Agents Used
-- **Primary Investigator**: [Agent that led the investigation]
-- **Supporting Agents**: [Other agents consulted]
-- **Unused Agents**: [Available agents not needed for this issue]
+### 6. Scope Boundaries
+- **In Scope**: [Components/services directly affected]
+- **Out of Scope**: [Related areas NOT affected]
+- **Boundary Risks**: [Edge cases where scope might expand]
 ```
 
 ## Usage
