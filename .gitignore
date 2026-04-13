@@ -53,3 +53,6 @@ docs/jira-integration-analysis/
 
 # Temporary payload files
 .claude/tmp/
+
+# Git worktrees
+.worktrees/
