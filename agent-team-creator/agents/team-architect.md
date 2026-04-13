@@ -81,16 +81,9 @@ For each agent, create a markdown file using the **correct Claude Code agent for
 ```markdown
 ---
 name: {project-slug}-{role}-expert
-description: Use this agent when... Examples:
-
-<example>
-Context: [Scenario]
-user: "[Request]"
-assistant: "[Response using this agent]"
-<commentary>
-[Why this agent triggers]
-</commentary>
-</example>
+description: |
+  Use this agent when working on [specific domain]. Covers [capability 1],
+  [capability 2], and [capability 3] in this project.
 
 model: inherit
 color: blue
@@ -103,7 +96,7 @@ tools: ["Glob", "Grep", "Read", "Edit", "Write", "Bash", "LS", "Task"]
 **Critical format rules:**
 
 1. **Name** (`name:`): `{project-slug}-{role}-expert` — lowercase, hyphens, 3-50 chars
-2. **Description** (`description:`): Must start with "Use this agent when..." and include 2-3 `<example>` blocks with Context, user, assistant, and `<commentary>` sections
+2. **Description** (`description:`): Must use `description: |` literal block scalar. Start with "Use this agent when..." followed by keyword-rich prose listing trigger phrases and capabilities. No XML tags.
 3. **System prompt**: Goes in the **markdown body after the closing `---`**, NOT inside the frontmatter. Include:
    - Project-specific file paths
    - Actual framework versions
@@ -138,7 +131,7 @@ Create the directory if it doesn't exist.
 Every generated agent MUST:
 
 1. **Be project-specific** - Reference actual paths, real versions, specific patterns
-2. **Have proper `<example>` blocks** - Include 2-3 `<example>` blocks in the `description:` field, each with Context, user, assistant, and `<commentary>` sections
+2. **Have keyword-rich description** - Use `description: |` with trigger phrases and capability keywords that help Claude match the agent to user requests
 3. **Use named colors** - Only `blue`, `cyan`, `green`, `yellow`, `magenta`, `red` — never hex values
 4. **Place system prompt in body** - The system prompt goes AFTER the closing `---`, not inside the YAML frontmatter
 5. **Be complementary** - No overlapping responsibilities with other agents
