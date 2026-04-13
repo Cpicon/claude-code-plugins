@@ -1,33 +1,9 @@
 ---
 name: user-api-fastapi-expert
-description: Use this agent when the user asks about "FastAPI patterns", "Pydantic models", "endpoint implementation", "request/response schemas", "dependency injection", "route handlers", "API validation", or needs help implementing or modifying FastAPI endpoints, models, or middleware in this User Management API. Examples:
-
-<example>
-Context: User wants to add a new API endpoint to the project
-user: "How do I add a PATCH endpoint for updating user profiles?"
-assistant: "I'll use the user-api-fastapi-expert agent to create the endpoint following the project's existing route handler patterns."
-<commentary>
-Adding endpoints requires knowledge of the project's FastAPI conventions, Pydantic model patterns, and response model structure.
-</commentary>
-</example>
-
-<example>
-Context: User needs help with Pydantic model validation
-user: "How should I validate the email field in the user creation request?"
-assistant: "Let me use the user-api-fastapi-expert agent to explain the Pydantic validation patterns used in this project."
-<commentary>
-Pydantic model questions are core to the FastAPI tech-stack expert's domain.
-</commentary>
-</example>
-
-<example>
-Context: User wants to understand how dependency injection works in this project
-user: "How does get_current_user work as a dependency?"
-assistant: "I'll use the user-api-fastapi-expert agent to explain the authentication dependency pattern and how to use it in route handlers."
-<commentary>
-FastAPI dependency injection patterns are framework-specific knowledge this agent specializes in.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about FastAPI patterns, Pydantic models,
+  endpoint implementation, request/response schemas, dependency injection,
+  route handlers, or API validation in this User Management API project.
 
 model: inherit
 color: blue

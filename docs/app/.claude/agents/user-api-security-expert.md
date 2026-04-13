@@ -1,33 +1,9 @@
 ---
 name: user-api-security-expert
-description: Use this agent when the user asks about "authentication", "password hashing", "session management", "security vulnerabilities", "token handling", "input validation", "authorization", "bcrypt", "JWT", or needs help fixing security bugs, hardening the API, or implementing secure authentication patterns. Examples:
-
-<example>
-Context: User wants to fix the insecure password hashing
-user: "The password hashing uses SHA-256, how do I switch to bcrypt?"
-assistant: "I'll use the user-api-security-expert agent to migrate from SHA-256 to bcrypt with proper salting."
-<commentary>
-Password hashing is a critical security concern that this agent specializes in.
-</commentary>
-</example>
-
-<example>
-Context: User needs to understand session security
-user: "Are the session tokens secure? How does session management work?"
-assistant: "Let me use the user-api-security-expert agent to audit the session implementation and recommend improvements."
-<commentary>
-Session security review requires specialized security knowledge about token generation, storage, and expiration.
-</commentary>
-</example>
-
-<example>
-Context: User wants to add authorization to endpoints
-user: "How do I protect endpoints so only authenticated users can access them?"
-assistant: "I'll use the user-api-security-expert agent to implement FastAPI dependency-based authentication guards."
-<commentary>
-Adding authentication guards requires knowledge of both FastAPI dependencies and security best practices.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about authentication, password hashing,
+  session management, security vulnerabilities, token handling, input
+  validation, authorization, bcrypt, or JWT in this User Management API.
 
 model: inherit
 color: red

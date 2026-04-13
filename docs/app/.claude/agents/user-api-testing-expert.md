@@ -1,33 +1,9 @@
 ---
 name: user-api-testing-expert
-description: Use this agent when the user asks about "writing tests", "test patterns", "pytest", "FastAPI testing", "TestClient", "test coverage", "fixtures", "mocking", "integration tests", or needs help creating, running, or debugging tests for the User Management API. Examples:
-
-<example>
-Context: User wants to write tests for the user creation endpoint
-user: "Help me write tests for the POST /users endpoint"
-assistant: "I'll use the user-api-testing-expert agent to create comprehensive tests including duplicate validation edge cases."
-<commentary>
-Writing endpoint tests requires knowledge of FastAPI TestClient patterns, fixtures, and the specific bugs to cover.
-</commentary>
-</example>
-
-<example>
-Context: User wants to set up the test infrastructure from scratch
-user: "How do I set up pytest for this project? The tests directory is empty."
-assistant: "Let me use the user-api-testing-expert agent to create the test configuration, conftest, and initial test suite."
-<commentary>
-Setting up test infrastructure from scratch requires knowledge of pytest configuration and FastAPI testing conventions.
-</commentary>
-</example>
-
-<example>
-Context: User needs to test authentication flows
-user: "How do I test the login endpoint and session management?"
-assistant: "I'll use the user-api-testing-expert agent to create auth flow tests with proper token handling and session verification."
-<commentary>
-Authentication testing requires understanding both the test framework and the session management implementation.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about writing tests, pytest, FastAPI
+  testing, TestClient, test coverage, fixtures, mocking, or integration
+  tests for the User Management API.
 
 model: inherit
 color: yellow

@@ -1,33 +1,10 @@
 ---
 name: project-debugger
-description: Use this agent when the user reports a "bug", "error", "unexpected behavior", "something is broken", "not working", "investigation needed", "debug", "root cause", or needs help diagnosing issues across the User Management API by coordinating specialist agents. Examples:
-
-<example>
-Context: User reports that duplicate emails are being accepted during registration
-user: "Users can register with the same email address. Why is the duplicate check not working?"
-assistant: "I'll use the project-debugger agent to investigate the email validation logic. It will coordinate with the FastAPI expert to trace the route handler and with the architecture expert to understand the storage layer."
-<commentary>
-This is a data integrity issue that spans route handling and storage. The debugger will orchestrate the FastAPI expert (to examine the endpoint logic) and the architecture expert (to understand the in-memory storage patterns), then produce a structured debugging report.
-</commentary>
-</example>
-
-<example>
-Context: User notices that deleted users still appear as active in the API
-user: "I deleted a user but they still show as active when I GET /users/{id}. The soft delete is broken."
-assistant: "Let me use the project-debugger agent to trace the delete flow. It will consult the FastAPI expert for the route handler behavior and the testing expert to verify the issue with targeted tests."
-<commentary>
-Soft delete issues require investigating the endpoint implementation and verifying state changes. The debugger coordinates specialists rather than diving into code directly, producing an evidence-based report with fix options.
-</commentary>
-</example>
-
-<example>
-Context: User suspects session tokens are lasting too long
-user: "Login sessions seem to never expire. Is the session expiration working correctly?"
-assistant: "I'll use the project-debugger agent to investigate the session lifecycle. It will coordinate with the security expert for token and expiration analysis and the FastAPI expert for the login endpoint logic."
-<commentary>
-Session expiration issues involve security concerns and endpoint implementation. The debugger orchestrates the security expert and FastAPI expert to produce a comprehensive root cause analysis.
-</commentary>
-</example>
+description: |
+  Use this agent when the user reports a bug, error, unexpected behavior,
+  something broken, or needs help diagnosing issues across the User Management
+  API. Coordinates specialist agents to investigate, produces structured
+  debugging reports with root cause analysis and fix recommendations.
 
 model: inherit
 color: red

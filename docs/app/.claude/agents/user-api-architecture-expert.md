@@ -1,33 +1,10 @@
 ---
 name: user-api-architecture-expert
-description: Use this agent when the user asks "where should I put this code", "how should I refactor", "project structure", "splitting main.py", "module organization", "code organization", "separation of concerns", "adding a database", or needs guidance on architectural decisions, code placement, and evolving the project structure. Examples:
-
-<example>
-Context: User wants to refactor the single-file application into modules
-user: "How should I split main.py into separate modules?"
-assistant: "I'll use the user-api-architecture-expert agent to recommend a modular structure following FastAPI best practices."
-<commentary>
-Refactoring decisions require understanding the current architecture and how to evolve it properly.
-</commentary>
-</example>
-
-<example>
-Context: User wants to add a database to replace in-memory storage
-user: "How do I migrate from in-memory dicts to a real database?"
-assistant: "Let me use the user-api-architecture-expert agent to plan the database migration and recommend an ORM."
-<commentary>
-Database migration is a major architectural decision requiring careful planning of the storage layer.
-</commentary>
-</example>
-
-<example>
-Context: User needs to understand the current project layout
-user: "What is the project structure and where are things?"
-assistant: "I'll use the user-api-architecture-expert agent to walk you through the current layout and conventions."
-<commentary>
-Understanding project organization is an architectural concern handled by this agent.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about code placement, project structure,
+  module organization, refactoring, separation of concerns, or adding a
+  database. Provides guidance on architectural decisions and evolving the
+  User Management API project structure.
 
 model: inherit
 color: magenta
