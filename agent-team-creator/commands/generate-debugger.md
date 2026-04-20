@@ -35,6 +35,19 @@ Generate a debugger agent specifically tailored to this project based on availab
    - Read each discovered agent file
    - Extract each agent's name, description, expertise, and tools
    - Run **Grep** on `.claude/agents/` for `name:`, `description:`, `tools:` to validate agents are well-formed
+   - **If any agent file is malformed** (missing `name:`, `description:`, or `tools:` in its YAML frontmatter, or has a name that doesn't match the filename), stop immediately and tell the user:
+     ```
+     The following agent files in .claude/agents/ are malformed and cannot
+     be added to the registry:
+       - <path>: missing field `<field>`
+       - <path>: name `<name>` does not match filename
+       ...
+
+     Fix or remove these files before re-running /generate-debugger.
+     A partial registry would produce a debugger that dispatches to
+     nonexistent specialists.
+     ```
+     Do NOT proceed with a partial registry.
    - Build a registry of available specialists
 
 2. **Analyze Project Context**
@@ -76,6 +89,29 @@ For each pattern category, adapt it to the specific project:
 - Identify bottleneck patterns specific to the project
 
 ### Phase 3: Generate the Debugger Agent
+
+#### Placeholder Conventions
+
+The Phase 3-4 templates below contain two placeholder styles. Substitute them as follows when writing the generated debugger:
+
+| Style | Meaning | Source | Example |
+|-------|---------|--------|---------|
+| `{curly-braces}` | Single-token substitution from discovered context. Replace verbatim. | Phase 1 registry, project metadata | `{agent-names-from-registry}` → `acme-backend-expert, acme-database-expert` |
+| `[square brackets]` | Multi-word descriptive substitution authored by the generator. Write a short phrase. | Phase 1-2 analysis | `[project-description]` → `Next.js / Express / PostgreSQL full-stack app` |
+
+**Defined placeholders:**
+
+- `{agent-names-from-registry}` — comma-separated agent names from Phase 1 (e.g., `acme-backend-expert, acme-database-expert`)
+- `{project-slug}` — short kebab-case identifier for the project (e.g., `acme`); must match the prefix used by agents generated via `/agent-team-creator:generate-agent-team`
+- `{KEY}` — a Jira issue key like `PROJ-123` (used in Save Policy)
+- `{YYYY-MM-DD-HHmm}` — ISO date with dashes (used for new-investigation filenames)
+- `{YYYYMMDD-HHmm}` — compact date without inner dashes (used for key-based filenames; see Save Policy note)
+- `[project-description]` — short human-readable description (e.g., `Next.js / Express / PostgreSQL full-stack app`)
+- `[Project-specific description with trigger examples]` — the agent's `description:` field including 2-3 `<example>` blocks
+- `[actual-agent-name]`, `[actual expertise]`, `[actual use cases]` — values from the Phase 1 registry per row of the Available Specialists table
+- `[Pattern Name Based on Project]`, `[Project-specific conditions]`, `[Using actual agent names]` — fill in from Phase 2 pattern generation
+
+If the project has no `{project-slug}` (agents were created manually without prefixes), use the bare agent name as it appears in `.claude/agents/`.
 
 Create `project-debugger.md` in `.claude/agents/` with:
 
@@ -133,6 +169,12 @@ You MAY use Read/Grep here for quick context only.
 You MUST use the Agent tool to dispatch at least one specialist
 BEFORE you write any analysis.
 
+**Observable enforcement**: Step 3 below requires you to open the
+synthesis with a `### Specialists Dispatched` block listing every
+specialist you invoked, the timestamp, and a one-line digest of
+their response. If that block is absent or empty, the report is
+INVALID and you must restart at Step 2.
+
 If you find yourself about to write "Root Cause" or "Analysis"
 without having dispatched an Agent, STOP and dispatch one first.
 
@@ -176,8 +218,21 @@ Agent call 2:
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
 into the full Debugging Report format below (all 6 sections:
-Issue Summary, Investigation Trail, Root Cause, Impact & Solutions,
-Version Impact, Scope Boundaries).
+Issue Summary, Investigation Trail, Root Cause Analysis,
+Impact Assessment & Solutions, Version Impact, Scope Boundaries).
+
+**Begin Step 3 with this required block** (this is the observable
+gate that proves Step 2 was completed):
+
+```markdown
+### Specialists Dispatched
+| Specialist | Dispatched At | One-line Digest |
+|------------|---------------|-----------------|
+| {subagent_type} | {YYYY-MM-DD HH:mm} | {one-line summary of their response} |
+```
+
+If this block is missing or has zero rows, the report is INVALID.
+Do not proceed to write the 6 report sections without it.
 
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
@@ -212,11 +267,12 @@ Save the completed debugging report to a file and inform the user.
 
 ### Save Location
 - **Directory**: `.claude/reports/debugging/`
-- **Create directory if it doesn't exist**: Use Write tool to create the path
+- **Create directory if it doesn't exist**: Run `Bash mkdir -p .claude/reports/debugging` (idempotent — safe if it already exists). If the command exits non-zero, surface the error to the user and STOP — do not attempt to write the report into a missing directory.
 
 ### File Naming
-- **Format**: `report-{YYYY-MM-DD-HHmm}.md`
+- **New investigation format**: `report-{YYYY-MM-DD-HHmm}.md` (dashed for readability)
 - **Example**: `report-2026-01-03-1530.md`
+- **Continuing investigation format**: `report-{KEY}-{YYYYMMDD-HHmm}.md` (compact timestamp keeps key-prefixed names from getting too long, e.g. `report-PROJ-123-20260103-1530.md`)
 
 ### Save Policy
 
@@ -229,10 +285,14 @@ Save the completed debugging report to a file and inform the user.
 - Search for existing linked report:
   - Glob: `.claude/reports/debugging/report-*{KEY}*.md`
   - Grep through reports for `jira_key: {KEY}` in frontmatter
-- Create a NEW file with key-based naming: `report-{KEY}-{YYYYMMDD-HHmm}.md`
-- Copy YAML frontmatter from the original report (preserve `jira_key`, `jira_url`)
-- Include a `## Previous Report` reference section linking to the prior report
-- Always create a new file (never overwrite) — history is preserved via timestamps
+- **If a prior report is found**:
+  - Create a NEW file with key-based naming: `report-{KEY}-{YYYYMMDD-HHmm}.md`
+  - Copy YAML frontmatter from the original report (preserve `jira_key`, `jira_url`)
+  - Include a `## Previous Report` reference section linking to the prior report
+  - Always create a new file (never overwrite) — history is preserved via timestamps
+- **If NO prior report is found** (Glob and Grep both return nothing):
+  - STOP and ask the user: "No prior report found for {KEY}. Should I (a) create a new investigation linked to {KEY} using the key-based filename, (b) treat this as an unrelated NEW investigation, or (c) abort?"
+  - Do NOT silently fall back to the NEW investigation path — the user explicitly mentioned a key, so a missing prior report may indicate a typo, a stale key, or a report saved elsewhere
 
 **YAML Frontmatter** (include ONLY when a Jira key is known):
 ```
@@ -354,7 +414,9 @@ Generates `project-debugger.md` in `.claude/agents/` with:
 
 ## Example Output Structure
 
-For a Next.js + Express + PostgreSQL project with existing agents `frontend-expert.md`, `backend-expert.md`, and `database-expert.md`:
+For an "acme" project (Next.js + Express + PostgreSQL) with existing agents `acme-frontend-expert.md`, `acme-backend-expert.md`, and `acme-database-expert.md` (note: agent names follow the `{project-slug}-{role}-expert` convention from `team-architect`):
+
+> **Abbreviation note**: The example below shows the **structure** of the generated debugger. Some sections are summarized (e.g., "Mandatory Output" shows a placeholder instead of the full 6-section report format, "After Saving" shows fewer branches). When generating the actual debugger, expand every section to the **full canonical text from Phase 4 above** — do not copy this abbreviated example verbatim.
 
 ```markdown
 ---
@@ -362,7 +424,7 @@ name: project-debugger
 description: Use this agent when debugging issues in this Next.js/Express/PostgreSQL application...
 model: inherit
 color: red
-tools: Agent(frontend-expert, backend-expert, database-expert), Read, Write, Grep, Glob, Bash
+tools: Agent(acme-frontend-expert, acme-backend-expert, acme-database-expert), Read, Write, Grep, Glob, Bash
 ---
 
 You are the debugging orchestrator for this Next.js/Express/PostgreSQL application.
@@ -374,9 +436,9 @@ and produces structured reports.
 
 | Agent | Expertise | Consult For |
 |-------|-----------|-------------|
-| frontend-expert | Next.js, React, Tailwind | UI bugs, SSR issues, hydration errors |
-| backend-expert | Express, Node.js, REST APIs | API errors, middleware issues |
-| database-expert | PostgreSQL, Prisma ORM | Query failures, data integrity |
+| acme-frontend-expert | Next.js, React, Tailwind | UI bugs, SSR issues, hydration errors |
+| acme-backend-expert | Express, Node.js, REST APIs | API errors, middleware issues |
+| acme-database-expert | PostgreSQL, Prisma ORM | Query failures, data integrity |
 
 ## MANDATORY WORKFLOW
 
@@ -391,12 +453,21 @@ You MAY use Read/Grep here for quick context only.
 You MUST use the Agent tool to dispatch at least one specialist
 BEFORE you write any analysis.
 
+**Observable enforcement**: Step 3 below requires you to open the
+synthesis with a `### Specialists Dispatched` block listing every
+specialist you invoked, the timestamp, and a one-line digest of
+their response. If that block is absent or empty, the report is
+INVALID and you must restart at Step 2.
+
 If you find yourself about to write "Root Cause" or "Analysis"
 without having dispatched an Agent, STOP and dispatch one first.
 
 ### Step 3: Synthesize
 AFTER all dispatched specialists return, combine their findings
 into the full Debugging Report format (all 6 sections).
+
+[... abbreviated — see Phase 4 canonical template for full Step 3 content
+including the required `### Specialists Dispatched` table block ...]
 
 ### Step 4: Save Report
 Save the completed debugging report to a file and inform the user.
@@ -405,17 +476,17 @@ Save the completed debugging report to a file and inform the user.
 
 ### Pattern 1: API Error (Backend Focus)
 **Triggers**: 4xx/5xx errors, timeout, API failures
-**Strategy**: Direct delegation to backend-expert, escalate to database-expert if query-related
+**Strategy**: Direct delegation to acme-backend-expert, escalate to acme-database-expert if query-related
 **Workflow**:
-1. Dispatch backend-expert for initial analysis
-2. If DB-related → Dispatch database-expert
+1. Dispatch acme-backend-expert for initial analysis
+2. If DB-related → Dispatch acme-database-expert
 3. Synthesize findings into report
 
 ### Pattern 2: Full-Stack Issue (Parallel Investigation)
 **Triggers**: Data not displaying, form submission failures
-**Strategy**: Parallel dispatch of frontend-expert and backend-expert
+**Strategy**: Parallel dispatch of acme-frontend-expert and acme-backend-expert
 **Workflow**:
-1. Simultaneously dispatch frontend-expert (UI/network) and backend-expert (API)
+1. Simultaneously dispatch acme-frontend-expert (UI/network) and acme-backend-expert (API)
 2. Cross-reference findings for integration issues
 3. Synthesize findings into report
 
@@ -423,9 +494,9 @@ Save the completed debugging report to a file and inform the user.
 **Triggers**: Wrong data displayed, missing records, stale data
 **Strategy**: Trace data flow from DB to UI
 **Workflow**:
-1. Dispatch database-expert (source of truth)
-2. Then dispatch backend-expert (data transformation)
-3. Finally dispatch frontend-expert (rendering)
+1. Dispatch acme-database-expert (source of truth)
+2. Then dispatch acme-backend-expert (data transformation)
+3. Finally dispatch acme-frontend-expert (rendering)
 4. Synthesize findings into report
 
 ## Report Persistence
@@ -434,33 +505,31 @@ Save the completed debugging report to a file and inform the user.
 
 ### Save Location
 - **Directory**: `.claude/reports/debugging/`
-- **Create directory if it doesn't exist**: Use Write tool to create the path
+- **Create directory if it doesn't exist**: Run `Bash mkdir -p .claude/reports/debugging` (idempotent)
 
 ### File Naming
-- **Format**: `report-{YYYY-MM-DD-HHmm}.md`
-- **Example**: `report-2026-01-03-1530.md`
+- **New investigation format**: `report-{YYYY-MM-DD-HHmm}.md` (e.g. `report-2026-01-03-1530.md`)
+- **Continuing investigation format**: `report-{KEY}-{YYYYMMDD-HHmm}.md` (e.g. `report-PROJ-123-20260103-1530.md`)
 
 ### Save Policy
 
-**For NEW investigations** (no prior report or Jira key referenced):
-- Create a NEW file: `report-{YYYY-MM-DD-HHmm}.md`
-- Save the COMPLETE debugging report (all sections)
-- Do NOT include YAML frontmatter
-
-**For CONTINUING investigations** (user mentions a Jira key like "PROJ-123" or a previous report):
-- Search for existing linked report
-- Create a NEW file with key-based naming: `report-{KEY}-{YYYYMMDD-HHmm}.md`
-- Copy YAML frontmatter from the original report (preserve `jira_key`, `jira_url`)
-- Always create a new file (never overwrite)
+[... abbreviated — see Phase 4 canonical template for full NEW vs CONTINUING
+branches, including the explicit "no prior report found" fallback ...]
 
 ### After Saving
 Tell the user:
 1. "Report saved to: .claude/reports/debugging/{filename}"
 2. "To create a Jira task from this report, run: /agent-team-creator:generate-jira-task"
 
+[... abbreviated — see Phase 4 canonical template for the additional
+branches when a Jira link already exists ...]
+
 ## Mandatory Output: Debugging Report
 
-[Full report format with all 6 sections - MUST save to file after producing]
+[... abbreviated — see Phase 4 canonical template for the full report format
+with all 6 sections: Issue Summary, Investigation Trail, Root Cause Analysis,
+Impact Assessment & Solutions, Version Impact, Scope Boundaries.
+MUST save to file after producing. ...]
 
 ## Role Reminder
 
@@ -471,17 +540,42 @@ across domains, and produces structured debug reports.
 
 ### Phase 5: Verify Generated Debugger
 
-After writing the debugger file, verify it contains ALL required sections:
+After writing the debugger file, you MUST perform an **active read-back verification** — do not rely on memory of what you wrote.
 
-**Required Section Checklist:**
-- [ ] `## Available Specialists` - Table of project agents
-- [ ] `## MANDATORY WORKFLOW` - 4-step procedural workflow with dispatch gate
-- [ ] `## Debugging Orchestration Patterns` - At least 2 patterns
-- [ ] `## Report Persistence` - **CRITICAL** - File save instructions
-- [ ] `## Mandatory Output: Debugging Report` - Report format with 6 sections (Issue Summary through Scope Boundaries)
-- [ ] `## Role Reminder` - Closing reinforcement of coordination role
+**Step 1 — Read the file you just wrote**:
+- Use the `Read` tool on `.claude/agents/project-debugger.md`
+- Confirm it loaded successfully (non-empty contents)
 
-If any section is missing, add it before completing. The Report Persistence section is especially critical - without it, reports won't be saved and `/generate-jira-task` will fail.
+**Step 2 — Grep for each required section header**:
+Run a `Grep` for each header below against `.claude/agents/project-debugger.md`. Each must return at least one match:
+
+| # | Required Header | Grep Pattern |
+|---|-----------------|--------------|
+| 1 | Available Specialists | `^## Available Specialists` |
+| 2 | MANDATORY WORKFLOW | `^## MANDATORY WORKFLOW` |
+| 3 | Debugging Orchestration Patterns | `^## Debugging Orchestration Patterns` |
+| 4 | Report Persistence (CRITICAL) | `^## Report Persistence` |
+| 5 | Mandatory Output: Debugging Report | `^## Mandatory Output: Debugging Report` |
+| 6 | Role Reminder | `^## Role Reminder` |
+
+**Step 3 — Grep for the dispatch gate inside MANDATORY WORKFLOW**:
+- Pattern: `Specialists Dispatched`
+- Must return at least one match. Without this gate, the procedural enforcement designed in Phase 4 is missing and Step 2 reverts to a soft suggestion.
+
+**Step 4 — Grep for the 6 report sections inside Mandatory Output**:
+- Patterns (each must match at least once): `### 1\. Issue Summary`, `### 2\. Investigation Trail`, `### 3\. Root Cause Analysis`, `### 4\. Impact Assessment`, `### 5\. Version Impact`, `### 6\. Scope Boundaries`
+
+**Step 5 — Grep that the agent's `tools:` field includes `Agent(...)`**:
+- Pattern: `^tools:.*Agent\(`
+- This is the orchestrator allowlist (Quality Standard 8). Without it, dispatch silently fails when `project-debugger` runs as the main thread.
+
+**On any failure**:
+- Report the missing section/gate to the user
+- Re-edit the file to add the missing piece
+- Re-run Steps 1-5 from the beginning (do NOT do partial verification)
+- Only declare Phase 5 complete when ALL 11 patterns above match
+
+The `## Report Persistence` section is especially critical — without it, reports won't be saved and `/generate-jira-task` will fail.
 
 ## Prerequisites
 

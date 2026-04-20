@@ -50,6 +50,36 @@ The debugger will:
 3. Generate orchestration patterns tailored to YOUR project
 4. Create a `project-debugger.md` that knows how to consult your specialists
 
+#### How to invoke `project-debugger`
+
+> **⚠ Important: run `project-debugger` as the main agent, not as a subagent.**
+
+`project-debugger` is an **orchestrator**. Its job is to dispatch specialist subagents (`backend-expert`, `database-expert`, etc.) and synthesize their findings into a structured report. Per the [Claude Code subagent docs](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned), *subagents cannot spawn other subagents*. This means the `Agent(specialist1, ...)` allowlist in the debugger's `tools` field — the mechanism that powers dispatch — **only takes effect when `project-debugger` runs as the main thread**.
+
+**Recommended invocation (main-thread — dispatch works):**
+
+```bash
+claude --agent project-debugger
+```
+
+Start a fresh Claude Code session with `project-debugger` as the main thread. The agent's `Agent(specialist1, ...)` allowlist is active in this mode, so it can dispatch your project specialists and synthesize their findings. Pass an initial prompt right away to begin investigating:
+
+```bash
+claude --agent project-debugger "API returns 500 on POST /users — trace the failure"
+```
+
+Use this opt-in pattern each time you want a debugging investigation. Keeping it ad-hoc (rather than the project default) means your other Claude Code sessions stay general-purpose and aren't forced into orchestrator mode.
+
+**Anti-pattern (subagent invocation — dispatch silently fails):**
+
+```
+@project-debugger investigate the login bug
+```
+
+When you `@mention` the debugger from a regular session, or another agent dispatches it via the Agent tool, `project-debugger` runs as a *subagent*. Its `Agent(...)` allowlist becomes a no-op, no specialists are dispatched, and the resulting report is synthesized from nothing.
+
+**Why performance suffers as a subagent:** the orchestrator was designed to delegate verbose investigation work to specialists in their own context windows. As a subagent, it cannot delegate, so it falls back to reading code directly with `Read`/`Grep` — collapsing the multi-agent architecture into a single-agent pattern (the exact bug fixed by [Issue #10](https://github.com/Cpicon/claude-code-plugins/issues/10)).
+
 **The generated debugger follows these core rules:**
 - **Coordinates, doesn't implement** - Delegates investigation to specialists
 - **Evidence-based only** - Requires file paths, line numbers, and code references

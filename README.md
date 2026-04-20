@@ -105,6 +105,22 @@ Generate a project-specific debugger agent that:
   - Solutions ordered by effort (quick/proper/comprehensive)
 - **Saves reports** to `.claude/reports/debugging/` for downstream processing
 
+> **⚠ Run `project-debugger` as the main agent, not as a subagent.**
+>
+> The generated `project-debugger` is an **orchestrator** — its value comes from dispatching specialist subagents (`backend-expert`, `database-expert`, etc.) and synthesizing their findings. Per the [Claude Code subagent docs](https://code.claude.com/docs/en/sub-agents#restrict-which-subagents-can-be-spawned), *subagents cannot spawn other subagents*, so the `Agent(...)` allowlist that powers dispatch only takes effect when `project-debugger` runs as the **main thread**.
+>
+> **Do this** (main-thread invocation — dispatch works):
+> ```bash
+> claude --agent project-debugger
+> ```
+> Start a session with `project-debugger` as the main thread. The `Agent(...)` allowlist is active, so dispatch to specialists works as designed. Use this each time you want to run a debugging investigation — keeping it opt-in avoids turning every session into a debugging session.
+>
+> **Avoid this** (subagent invocation — dispatch silently fails):
+> ```
+> @project-debugger investigate the login bug
+> ```
+> When invoked via `@mention` or the Agent tool from another agent, `project-debugger` runs as a subagent. Its `Agent(...)` tools entry is ignored, no specialists are dispatched, and the report is synthesized from nothing — defeating the entire purpose of the orchestrator.
+
 #### `/generate-jira-task`
 Transform debugging reports into well-structured Jira tasks, or update existing ones:
 - Reads debugging reports from `.claude/reports/debugging/`

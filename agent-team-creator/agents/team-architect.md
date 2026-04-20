@@ -117,7 +117,7 @@ assistant: "[Response using this agent]"
 
 model: inherit
 color: blue
-tools: ["Glob", "Grep", "Read", "Edit", "Write", "Bash", "LS", "Task"]
+tools: ["Glob", "Grep", "Read", "Edit", "Write", "Bash", "LS"]
 ---
 
 [System prompt goes here as markdown body, NOT inside frontmatter]
@@ -132,7 +132,7 @@ tools: ["Glob", "Grep", "Read", "Edit", "Write", "Bash", "LS", "Task"]
    - Actual framework versions
    - Real conventions from the codebase
    - Concrete examples from existing code
-4. **Tools** (`tools:`): Array of quoted strings — `["Glob", "Grep", "Read"]`
+4. **Tools** (`tools:`): Array of quoted strings — `["Glob", "Grep", "Read"]`. **Do not include `Task` or `Agent`** for specialist agents — per the [Claude Code subagent docs](https://code.claude.com/docs/en/sub-agents), subagents cannot spawn other subagents, so the `Agent(...)` allowlist has no effect on them. Only orchestrators that run as the main thread (via `claude --agent`) need `Agent(specialist1, ...)` (see Quality Standard 8 below).
 5. **Color** (`color:`): Must be a named color — only `blue`, `cyan`, `green`, `yellow`, `magenta`, or `red`
 6. **Model** (`model:`): Use `inherit` (recommended default)
 
