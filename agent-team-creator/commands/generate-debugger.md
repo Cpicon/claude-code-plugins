@@ -18,6 +18,24 @@ argument-hint: "[issue-description]"
 
 Generate a debugger agent specifically tailored to this project based on available project agents, architecture, tech stack, and project type.
 
+> ## ⛔ HARD RULE — Generated Agent Name and Path
+>
+> The generated debugger **MUST** be:
+>
+> | Field | Required Value | Why it must be exact |
+> |-------|----------------|----------------------|
+> | `name:` (frontmatter) | `project-debugger` | Users alias `claudebug='claude --agent project-debugger'`. Any other name breaks every alias and onboarding doc across every project. |
+> | File path | `.claude/agents/project-debugger.md` | Claude Code resolves agents by `name:`, but tools, scripts, and `/agent-team-creator:generate-debugger` re-runs locate the file by this exact path. |
+>
+> **Forbidden variations** (do NOT generate any of these):
+> - `{project-slug}-debugger` (e.g., `acme-debugger`) — breaks the `claudebug` alias
+> - `debugger`, `project-debug`, `debug-orchestrator`, `orchestrator` — breaks tooling lookups
+> - Any path other than `.claude/agents/project-debugger.md` — even if `name:` is correct
+>
+> This is a **fixed contract** between the plugin, the user's shell aliases, and the Claude Code agent loader. Project-specific customization belongs in the agent's `description:`, system prompt, and `Agent(...)` allowlist — **never in the agent name**.
+>
+> Phase 5 verification (below) will Grep for both the exact `name:` line and the exact file path, and will FAIL the generation if either is wrong.
+
 ## Execution Instructions
 
 ### Phase 1: Discovery
@@ -542,6 +560,12 @@ across domains, and produces structured debug reports.
 
 After writing the debugger file, you MUST perform an **active read-back verification** — do not rely on memory of what you wrote.
 
+**Step 0 — Verify name and path (HARD RULE check, runs FIRST)**:
+- Confirm the file you just wrote is at the exact path `.claude/agents/project-debugger.md` (use `Bash test -f .claude/agents/project-debugger.md` — exit 0 required)
+- `Grep` pattern `^name: project-debugger$` against `.claude/agents/project-debugger.md` — must return exactly one match
+- `Grep` pattern `^name:` against `.claude/agents/project-debugger.md` — must return exactly one match (catches duplicate or wrong `name:` lines)
+- If ANY of these checks fail: DELETE the wrong file, rewrite at the correct path with `name: project-debugger`, then restart Phase 5 from Step 0. Do NOT proceed with a misnamed agent — it will silently break user aliases like `claudebug='claude --agent project-debugger'`.
+
 **Step 1 — Read the file you just wrote**:
 - Use the `Read` tool on `.claude/agents/project-debugger.md`
 - Confirm it loaded successfully (non-empty contents)
@@ -572,8 +596,8 @@ Run a `Grep` for each header below against `.claude/agents/project-debugger.md`.
 **On any failure**:
 - Report the missing section/gate to the user
 - Re-edit the file to add the missing piece
-- Re-run Steps 1-5 from the beginning (do NOT do partial verification)
-- Only declare Phase 5 complete when ALL 11 patterns above match
+- Re-run Steps 0-5 from the beginning (do NOT do partial verification)
+- Only declare Phase 5 complete when ALL 14 checks above pass (3 from Step 0 + 6 section headers + 1 dispatch gate + 6 report sections + 1 Agent allowlist; the 6 report sections share Step 4 but each pattern is verified individually)
 
 The `## Report Persistence` section is especially critical — without it, reports won't be saved and `/generate-jira-task` will fail.
 
@@ -588,3 +612,22 @@ The `## Report Persistence` section is especially critical — without it, repor
 - The debugger is most effective when specialized agents already exist
 - Generated patterns become more sophisticated with more agents available
 - Always review the generated debugger and customize patterns if needed
+
+---
+
+## ⛔ HARD RULE — Final Reminder Before You Finish
+
+Before you announce "debugger generated successfully" to the user, confirm one last time:
+
+1. **`name:` is exactly `project-debugger`** — not `acme-debugger`, not `myproject-debugger`, not `debugger`. Just `project-debugger`.
+2. **File path is exactly `.claude/agents/project-debugger.md`** — not `.claude/agents/{slug}-debugger.md`.
+3. **Phase 5 Step 0 passed** (path exists, exactly one `^name: project-debugger$` line, exactly one `^name:` line total).
+
+If any of these is wrong, you have broken the contract that lets users alias `claudebug='claude --agent project-debugger'` and use the same command across every project. **Fix it before reporting success.**
+
+Project customization goes in:
+- ✅ `description:` field — project-specific trigger examples
+- ✅ System prompt body — project tech stack, patterns, specialists
+- ✅ `Agent(...)` allowlist — project-specific specialist names
+- ❌ **NEVER** the `name:` field
+- ❌ **NEVER** the file path
