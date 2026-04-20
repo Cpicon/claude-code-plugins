@@ -5,34 +5,10 @@ This is a complete example of a generated domain expert agent.
 ```markdown
 ---
 name: acme-dashboard-domain-expert
-description: Use this agent when the user asks about "user management", "orders and checkout", "data models", "business logic", "API endpoints", "how authentication works", "subscription handling", or needs to understand the business domain, data flows, and entity relationships. Examples:
-
-<example>
-Context: User wants to understand a business process
-user: "How does the order fulfillment process work?"
-assistant: "I'll use the acme-dashboard-domain-expert agent to explain the business flow and related data models."
-<commentary>
-Business process questions require domain expertise with knowledge of data models and business logic.
-</commentary>
-</example>
-
-<example>
-Context: User needs to understand entity relationships
-user: "What's the relationship between users and subscriptions?"
-assistant: "Let me use the acme-dashboard-domain-expert agent to explain the entity relationships and data model."
-<commentary>
-Entity relationship questions are core domain expertise.
-</commentary>
-</example>
-
-<example>
-Context: User is adding a new field to an entity
-user: "How do I add a new field to the user profile?"
-assistant: "I'll use the acme-dashboard-domain-expert agent to guide you through the data model, API, and validation layers."
-<commentary>
-Modifying domain objects requires understanding the full domain stack.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about user management, orders and
+  checkout, data models, business logic, API endpoints, authentication
+  flow, subscription handling, or entity relationships.
 
 model: inherit
 color: green

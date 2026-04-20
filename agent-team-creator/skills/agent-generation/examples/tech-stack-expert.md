@@ -5,34 +5,11 @@ This is a complete example of a generated tech-stack expert agent for a Next.js 
 ```markdown
 ---
 name: acme-dashboard-react-expert
-description: Use this agent when the user asks about "React patterns in this project", "Next.js features", "component architecture", "hooks usage", "state management", "Tailwind styling", "React Query patterns", or needs help implementing frontend features following project conventions. Examples:
-
-<example>
-Context: User wants to create a new page in the project
-user: "How do I create a new page in this project?"
-assistant: "I'll use the acme-dashboard-react-expert agent to guide you through the Next.js App Router page patterns."
-<commentary>
-Creating pages involves framework-specific patterns that the tech-stack expert knows.
-</commentary>
-</example>
-
-<example>
-Context: User needs help with data fetching
-user: "What's the pattern for data fetching here?"
-assistant: "Let me use the acme-dashboard-react-expert agent to explain the React Query patterns used in this project."
-<commentary>
-Data fetching patterns are tech-stack specific and handled by this agent.
-</commentary>
-</example>
-
-<example>
-Context: User wants to build a form component
-user: "Help me build a form component"
-assistant: "I'll use the acme-dashboard-react-expert agent to create a form following the project's React Hook Form + Zod patterns."
-<commentary>
-Building components requires knowledge of the project's tech stack and conventions.
-</commentary>
-</example>
+description: |
+  Use this agent when the user asks about React patterns in this project,
+  Next.js features, component architecture, hooks usage, state management,
+  Tailwind styling, or React Query patterns. Covers frontend implementation
+  following project conventions.
 
 model: inherit
 color: blue

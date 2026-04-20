@@ -640,13 +640,11 @@ Location: `agent-team-creator/agents/implementation-planner.md`
 ```markdown
 ---
 name: implementation-planner
-description: Use this agent when you need to design an implementation plan from a debugging report or problem description. This agent analyzes root causes, selects appropriate solution tiers, and creates step-by-step implementation guidance. Does not require MCP access.
-
-<example>
-Context: A debugging report identified a root cause and multiple solution options.
-user: "Design an implementation plan for this bug fix"
-assistant: "I'll use the implementation-planner agent to analyze the solutions and create a detailed plan."
-</example>
+description: |
+  Use this agent when you need to design an implementation plan from a
+  debugging report or problem description. Analyzes root causes, selects
+  appropriate solution tiers, and creates step-by-step implementation guidance.
+  Does not require MCP access.
 
 model: inherit
 color: cyan

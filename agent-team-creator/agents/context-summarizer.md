@@ -1,6 +1,10 @@
 ---
 name: context-summarizer
-description: Use this agent to analyze and summarize Jira work item context from provided data. This agent takes Jira issue details as input and provides structured analysis of scope, dependencies, and blockers. NOTE: This agent does NOT fetch from Jira directly - the calling command or user should provide issue data as input. Examples:\n\n<example>\nContext: User has Jira issue data and needs context analysis.\nuser: "Analyze the context of these Jira issues"\nassistant: "I'll use the context-summarizer agent to provide a structured analysis."\n</example>
+description: |
+  Use this agent to analyze and summarize Jira work item context from provided
+  data. Takes Jira issue details as input and provides structured analysis of
+  scope, dependencies, and blockers. NOTE: This agent does NOT fetch from Jira
+  directly - the calling command or user should provide issue data as input.
 model: inherit
 tools:
   - Read
