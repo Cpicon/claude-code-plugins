@@ -1,17 +1,19 @@
 ---
 name: Jira REST API
-description: Knowledge for invoking the Jira REST API v2 via jira_client.py.
+description: Knowledge for invoking the Jira REST API via jira_client.py.
   Used by commands (generate-jira-task, update-generated-report) as a fallback
   when the Atlassian MCP plugin is unavailable. Contains credential configuration,
   script invocation syntax, action reference, error handling, and security guidance.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Jira REST API Client
 
 This skill documents the REST API fallback tier for the Jira integration. When the
 Atlassian MCP plugin is unavailable, commands use the `jira_client.py` script to
-interact with Jira directly via REST API v2.
+interact with Jira directly via REST API v2 — except for issue search, which uses
+the v3 `/search/jql` endpoint after Atlassian removed the v2/v3 `/search` routes
+(HTTP 410, see [CHANGE-2046](https://developer.atlassian.com/changelog/#CHANGE-2046)).
 
 ## Architecture
 
@@ -55,12 +57,23 @@ Credentials are ALWAYS read from the config file. Never pass tokens as CLI argum
 |--------|---------------|----------------|---------|
 | `verify-auth` | `--config` | — | `{ok, email, displayName}` |
 | `get-projects` | `--config` | `--query` | `{ok, projects: [{key,name,id}]}` |
-| `search-issues` | `--config --payload-file` | — | `{ok, issues: [{key,summary,status}], total}` |
+| `search-issues` | `--config --payload-file` | — | `{ok, issues: [{key,summary,status,created}], total, nextPageToken?}` |
 | `get-issue-types` | `--config --project` | — | `{ok, issueTypes: [{name,id}]}` |
 | `create-issue` | `--config --payload-file` | — | `{ok, key, url}` |
 | `get-issue` | `--config --issue-key` | — | `{ok, key, summary, description, status, comments}` |
 | `add-comment` | `--config --issue-key --payload-file` | — | `{ok, commentId}` |
 | `get-accessible-resources` | `--config` | — | `{ok, baseUrl}` (alias for verify-auth) |
+
+### Notes on `search-issues`
+
+- Endpoint: `POST /rest/api/3/search/jql` (the v2/v3 `/search` routes were removed by Atlassian).
+- `total` is an **approximate** count fetched from `/rest/api/3/search/approximate-count`
+  in a separate non-fatal call. If that secondary call fails, `total` falls back to
+  `len(issues)` so the search still returns useful data.
+- Pagination is **token-based**, not offset-based. When more results exist beyond
+  `maxResults`, the response includes `nextPageToken`; pass it back in the next
+  payload's `nextPageToken` field to fetch the next page. There is no `startAt`.
+- Default `maxResults` is `5`; payload may override (Jira caps at 100).
 
 ## Exit Codes
 

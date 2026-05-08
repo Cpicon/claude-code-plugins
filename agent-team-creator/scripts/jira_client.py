@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Jira REST API v2 client for Claude Code plugin fallback.
+"""Jira REST API client for Claude Code plugin fallback.
 
 Zero external dependencies — uses only Python 3 stdlib.
 Credentials read from config file (never CLI args).
@@ -40,25 +40,27 @@ def read_config(path):
 
 # --- HTTP ---
 
-def make_request(config, method, path, body=None, timeout=15):
-    """Execute an authenticated HTTP request to Jira REST API v2.
-
-    Returns parsed JSON response.
-    Raises urllib.error.HTTPError or urllib.error.URLError on failure.
-    """
+def _build_authed_request(config, method, path, body):
+    """Build an authenticated urllib.Request (no I/O)."""
     url = f"{config['baseUrl']}{path}"
     credentials = f"{config['email']}:{config['apiToken']}"
     auth_header = base64.b64encode(credentials.encode()).decode()
-
     headers = {
         "Authorization": f"Basic {auth_header}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-
     data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    return urllib.request.Request(url, data=data, headers=headers, method=method)
 
+
+def make_request(config, method, path, body=None, timeout=15):
+    """Execute an authenticated HTTP request to Jira REST API.
+
+    Returns parsed JSON response.
+    Calls error_exit() on HTTP errors (auth, network, server, jira-api).
+    """
+    req = _build_authed_request(config, method, path, body)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status == 204:
@@ -70,6 +72,22 @@ def make_request(config, method, path, body=None, timeout=15):
         if "timed out" in str(e.reason):
             error_exit("Request timed out", 3)
         error_exit(f"Cannot reach {config['baseUrl']}: {e.reason}", 3)
+
+
+def try_request(config, method, path, body=None, timeout=10):
+    """Non-fatal variant of make_request: returns None on any failure.
+
+    Use for optional/secondary calls where the action should still succeed
+    if this call fails (e.g., approximate-count for duplicate detection).
+    """
+    req = _build_authed_request(config, method, path, body)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 204:
+                return {}
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
 
 
 def make_request_with_retry(config, method, path, body=None, retries=1):
@@ -238,14 +256,27 @@ def action_get_projects(config, args):
 
 
 def action_search_issues(config, args):
-    """Search issues via JQL."""
+    """Search issues via JQL using /rest/api/3/search/jql.
+
+    Atlassian removed /rest/api/2/search and /rest/api/3/search (HTTP 410)
+    in favor of a token-paginated endpoint that no longer returns `total`.
+    To preserve duplicate-detection UX ("Found ~47 similar issues"), we
+    fetch an approximate count from /rest/api/3/search/approximate-count
+    in a separate non-fatal call. Failures there degrade to the page size.
+
+    See: https://developer.atlassian.com/changelog/#CHANGE-2046
+    """
     payload = read_payload(args.payload_file)
+    jql = payload.get("jql", "")
     body = {
-        "jql": payload.get("jql", ""),
+        "jql": jql,
         "maxResults": payload.get("maxResults", 5),
         "fields": payload.get("fields", ["summary", "status", "created", "key"]),
     }
-    data = make_request(config, "POST", "/rest/api/2/search", body)
+    if payload.get("nextPageToken"):
+        body["nextPageToken"] = payload["nextPageToken"]
+
+    data = make_request(config, "POST", "/rest/api/3/search/jql", body)
     issues = []
     for issue in data.get("issues", []):
         fields = issue.get("fields", {})
@@ -256,7 +287,16 @@ def action_search_issues(config, args):
             "status": status.get("name", "") if isinstance(status, dict) else str(status),
             "created": fields.get("created", ""),
         })
-    return {"ok": True, "issues": issues, "total": data.get("total", 0)}
+
+    count_data = try_request(
+        config, "POST", "/rest/api/3/search/approximate-count", {"jql": jql}
+    )
+    total = count_data.get("count", len(issues)) if count_data else len(issues)
+
+    result = {"ok": True, "issues": issues, "total": total}
+    if data.get("nextPageToken"):
+        result["nextPageToken"] = data["nextPageToken"]
+    return result
 
 
 def action_get_issue_types(config, args):
@@ -395,7 +435,7 @@ ACTIONS = {
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Jira REST API v2 client")
+    parser = argparse.ArgumentParser(description="Jira REST API client")
     parser.add_argument("--action", required=True, choices=ACTIONS.keys())
     parser.add_argument("--config", required=True, help="Path to credential config JSON")
     parser.add_argument("--issue-key", dest="issue_key", help="Jira issue key (e.g., PROJ-123)")
