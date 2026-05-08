@@ -419,6 +419,41 @@ Execute phases 0-6 in order. Track `JIRA_MODE` state throughout.
    | `**Labels:**` | Parse as comma-separated list or bracketed array | labels array |
    | `**Acceptance Criteria:**` | Include in description | (part of description) |
 
+7. **Determine priority and assignee** (COMMAND responsibility)
+
+   **Auto-derive priority** from the Impact Assessment section of the debugging report:
+
+   | Impact wording | Mapped priority |
+   |----------------|-----------------|
+   | "critical", "highest", "P0" | `Highest` |
+   | "high", "P1" | `High` |
+   | "medium", "P2", or unclear | `Medium` (default) |
+   | "low", "P3", "minor" | `Low` |
+   | "lowest", "trivial" | `Lowest` |
+
+   Store as `derivedPriority`.
+
+   **Resolve current user accountId**:
+   - `JIRA_MODE = "MCP"`: Call `mcp__plugin_atlassian_atlassian__atlassianUserInfo()` and extract `accountId` + `displayName`.
+   - `JIRA_MODE = "REST"`: Bash `python3 {SCRIPT_PATH} --action get-current-user --config .claude/jira-rest-config.json`. Parse stdout for `accountId` + `displayName`.
+   - `JIRA_MODE = "OFFLINE"`: Skip — assignment will be left blank in the markdown draft.
+
+   Store as `currentUser = {accountId, displayName}`.
+
+   **Confirm with user** via a single `AskUserQuestion` call with two questions:
+
+   - **Q1 — Priority**: "Set ticket priority?"
+     - Options:
+       - `Use auto-derived ({derivedPriority})` (Recommended) → `selectedPriority = derivedPriority`
+       - `Highest` / `High` / `Medium` / `Low` (3 most common alternatives, omit Lowest unless `derivedPriority == Lowest`)
+     - Store the result as `selectedPriority`.
+
+   - **Q2 — Assignee** (skip in OFFLINE mode):
+     - Options:
+       - `Assign to me ({currentUser.displayName})` (Recommended) → `selectedAssigneeAccountId = currentUser.accountId`
+       - `Leave unassigned` → `selectedAssigneeAccountId = null`
+     - Store the result as `selectedAssigneeAccountId`.
+
 ---
 
 ### REST API Call Pattern
@@ -541,6 +576,7 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
    > Generated: [current timestamp]
    > Mode: Fallback (Atlassian MCP unavailable)
    > Issue Type: [Bug/Task]
+   > Priority: [selectedPriority from Phase 5 step 7, or "Medium" if step 7 was skipped in OFFLINE mode]
 
    ---
 
@@ -559,8 +595,11 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
    1. Copy the Summary and Description above
    2. Create a new issue in your Jira project
    3. Set the issue type to: [Bug/Task]
-   4. Add the labels listed above
-   5. Review and adjust as needed
+   4. Set priority to: [selectedPriority]
+   5. Assign to yourself or a teammate (was skipped in offline mode)
+   6. Add the labels listed above
+   7. **Attach the source debug report file**: [absolute path to source/debug/report.md]
+   8. Review and adjust as needed
    ```
 
 4. **Notify user**
@@ -596,14 +635,16 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
 
 3. **Write issue payload**
 
-   Write to `.claude/tmp/jira-payload.json`:
+   Write to `.claude/tmp/jira-payload.json`. Include `priority` and `assignee_account_id` from Phase 5 step 7 (omit `assignee_account_id` if user chose "Leave unassigned"):
    ```json
    {
      "project_key": "[projectKey]",
      "issue_type": "[validated issue type from step 2]",
      "summary": "[extracted from jira-writer output]",
      "description": "[extracted from jira-writer output]",
-     "labels": ["[sanitized labels from Phase 5]"]
+     "labels": ["[sanitized labels from Phase 5]"],
+     "priority": "[selectedPriority from Phase 5 step 7]",
+     "assignee_account_id": "[selectedAssigneeAccountId from Phase 5 step 7, or omit key if null]"
    }
    ```
 
@@ -627,9 +668,18 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
      - Save draft to `.claude/reports/jira-drafts/draft-{timestamp}.md`
      - Display: "REST API failed. Draft saved to: [path]"
 
-5. **Store Jira link in source report** — same frontmatter logic as MCP path, but use `{baseUrl}/browse/{key}` for `jira_url`
+5. **Attach source debug report to the new issue** (REST mode only)
 
-6. **Clean up** — delete `.claude/tmp/jira-payload.json`
+   The source debugging report (path determined in Phase 2) is attached as a markdown file so the full original artifact lives on the ticket alongside the formatted summary.
+
+   Bash: `python3 {SCRIPT_PATH} --action attach-file --config .claude/jira-rest-config.json --issue-key {key} --file-path {abs/path/to/source/debug/report.md}`
+
+   - If **exit 0**: Append to the success display: `Attachment: {filename} ({size} bytes)`.
+   - If **exit != 0**: Non-fatal. Display: `Note: failed to attach source report to {key} — you can attach it manually in Jira. (error: [error message])`. Do NOT abort.
+
+6. **Store Jira link in source report** — same frontmatter logic as MCP path, but use `{baseUrl}/browse/{key}` for `jira_url`
+
+7. **Clean up** — delete `.claude/tmp/jira-payload.json`
 
 #### If UPDATE_MODE = false and JIRA_MODE = "MCP" (Create New Issue)
 
@@ -659,9 +709,13 @@ When `JIRA_MODE = "REST"`, all Jira operations follow this pattern:
    summary: [extracted from jira-writer output]
    description: [extracted from jira-writer output - preserve markdown formatting]
    additional_fields: {
-     labels: [sanitized labels array]
+     labels: [sanitized labels array],
+     priority: { name: "[selectedPriority from Phase 5 step 7]" },
+     assignee: { accountId: "[selectedAssigneeAccountId from Phase 5 step 7]" }  // omit assignee key entirely if user chose "Leave unassigned"
    }
    ```
+
+   **Note**: file attachment is not supported by the Atlassian MCP tools today — in MCP mode the source debug report is NOT attached. The full report content is already embedded in the description via jira-writer.
 
 3. **Handle success**
 

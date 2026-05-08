@@ -1,6 +1,6 @@
 {
   "name": "agent-team-creator",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Analyze codebase architecture and tech stack to automatically generate specialized Claude Code agent teams",
   "author": {
     "name": "Christian Picon Calderon",
