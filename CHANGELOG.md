@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-08
+
+### Added
+- `jira_client.py`: `update-issue` action — patch summary, description, labels, priority, assignee, or any raw field on an existing issue via `PUT /rest/api/2/issue/{key}`. Includes a `fields` escape hatch for custom fields the script doesn't model directly.
+- `jira_client.py`: `attach-file` action — upload any local file (markdown, logs, screenshots) as a Jira attachment via multipart `POST /rest/api/2/issue/{key}/attachments`. Sends `X-Atlassian-Token: no-check` as required by Atlassian.
+- `jira_client.py`: `delete-issue` action — `DELETE /rest/api/2/issue/{key}`. Cascades to subtasks by default; `--no-cascade` flag refuses deletion when subtasks exist.
+- `jira_client.py`: `get-current-user` action — clearer-named alias for `verify-auth`. Returns `{accountId, email, displayName}` for the authenticated user. Useful for self-assignment without the user having to know their accountId.
+- `jira_client.py`: new CLI flags `--file-path` (for `attach-file`) and `--no-cascade` (for `delete-issue`).
+- `jira-rest-api` skill: documented the 5 new actions with payload patterns and invocation examples. Skill version bumped to `1.2.0`.
+- `/generate-jira-task` Phase 5 step 7: derives priority from impact assessment, resolves the current user's accountId, and prompts the user (single batched `AskUserQuestion`) for priority and assignee selection. Defaults are Recommended in both questions.
+- `/generate-jira-task` Phase 6 (REST mode): now attaches the source debugging report `.md` to the new Jira issue after creation, so the original artifact lives on the ticket alongside the formatted summary. Non-fatal — attachment failure does not abort issue creation.
+
+### Changed
+- `jira_client.py`: `create-issue` payload accepts three new optional fields: `priority` (string name, e.g. "High"), `assignee_account_id` (Atlassian accountId), and `parent_key` (parent issue key for subtasks). Existing callers that don't pass these fields see identical behavior.
+- `/generate-jira-task` Phase 6 (REST and MCP create paths): tickets are now created with priority + assignee in a single API call instead of being created with defaults and immediately patched.
+- `/generate-jira-task` Phase 6 (OFFLINE draft): markdown draft now includes priority and an explicit instruction to attach the source debug report when manually creating the ticket.
+- `/generate-jira-task` Phase 6 (MCP create): `additional_fields` now includes `priority.name` and (when not unassigned) `assignee.accountId`. Note: file attachment is not supported by the Atlassian MCP tools today; only REST mode attaches the source report.
+
+### Internal
+- `jira_client.py`: `create-issue` body construction refactored to build the `fields` dict incrementally before submission, accommodating the new optional fields without nesting conditionals inside the request body literal.
+
 ## [1.1.2] - 2026-05-07
 
 ### Fixed
@@ -86,7 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-phase command execution with agent orchestration
 - Graceful fallback modes when external services unavailable
 
-[Unreleased]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/Cpicon/claude-code-plugins/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Cpicon/claude-code-plugins/compare/v1.0.0...v1.1.0

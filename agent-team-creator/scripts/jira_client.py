@@ -313,7 +313,16 @@ def action_get_issue_types(config, args):
 
 
 def action_create_issue(config, args):
-    """Create a new Jira issue."""
+    """Create a new Jira issue.
+
+    Required payload fields: project_key, issue_type, summary.
+    Optional payload fields:
+      - description (markdown, converted to wiki markup)
+      - labels (list of strings)
+      - priority (string name, e.g. "High", "Medium", "P1")
+      - assignee_account_id (Atlassian accountId — get yours via get-current-user)
+      - parent_key (issue key, e.g. "GCI-40"; pair with issue_type="Subtask")
+    """
     payload = read_payload(args.payload_file)
 
     for field in ("project_key", "issue_type", "summary"):
@@ -323,20 +332,23 @@ def action_create_issue(config, args):
     description = payload.get("description", "")
     wiki_description = markdown_to_wiki(description)
 
-    body = {
-        "fields": {
-            "project": {"key": payload["project_key"]},
-            "issuetype": {"name": payload["issue_type"]},
-            "summary": payload["summary"][:255],
-            "description": wiki_description,
-        }
+    fields = {
+        "project": {"key": payload["project_key"]},
+        "issuetype": {"name": payload["issue_type"]},
+        "summary": payload["summary"][:255],
+        "description": wiki_description,
     }
 
-    labels = payload.get("labels", [])
-    if labels:
-        body["fields"]["labels"] = labels
+    if payload.get("labels"):
+        fields["labels"] = payload["labels"]
+    if payload.get("priority"):
+        fields["priority"] = {"name": payload["priority"]}
+    if payload.get("assignee_account_id"):
+        fields["assignee"] = {"accountId": payload["assignee_account_id"]}
+    if payload.get("parent_key"):
+        fields["parent"] = {"key": payload["parent_key"]}
 
-    data = make_request(config, "POST", "/rest/api/2/issue", body)
+    data = make_request(config, "POST", "/rest/api/2/issue", {"fields": fields})
     issue_key = data.get("key", "")
     return {
         "ok": True,
@@ -390,6 +402,134 @@ def action_add_comment(config, args):
     return {"ok": True, "commentId": data.get("id", "")}
 
 
+def action_update_issue(config, args):
+    """Patch fields on an existing Jira issue.
+
+    Payload fields (any subset, all optional):
+      - summary           (string)
+      - description       (markdown, converted to wiki markup)
+      - labels            (list of strings — REPLACES existing labels)
+      - priority          (string name)
+      - assignee_account_id (Atlassian accountId, or null to unassign)
+      - fields            (dict of raw Jira field overrides — escape hatch)
+    """
+    if not args.issue_key:
+        error_exit("--issue-key required for update-issue", 2)
+    payload = read_payload(args.payload_file)
+
+    fields = {}
+    if "summary" in payload:
+        fields["summary"] = payload["summary"][:255]
+    if "description" in payload:
+        fields["description"] = markdown_to_wiki(payload["description"])
+    if "labels" in payload:
+        fields["labels"] = payload["labels"]
+    if "priority" in payload:
+        fields["priority"] = {"name": payload["priority"]}
+    if "assignee_account_id" in payload:
+        fields["assignee"] = (
+            None if payload["assignee_account_id"] is None
+            else {"accountId": payload["assignee_account_id"]}
+        )
+    if "fields" in payload:  # raw escape hatch
+        fields.update(payload["fields"])
+
+    if not fields:
+        error_exit("update-issue payload must set at least one field", 2)
+
+    make_request(config, "PUT", f"/rest/api/2/issue/{args.issue_key}", {"fields": fields})
+    return {
+        "ok": True,
+        "key": args.issue_key,
+        "url": f"{config['baseUrl']}/browse/{args.issue_key}",
+        "updated": list(fields.keys()),
+    }
+
+
+def action_attach_file(config, args):
+    """Upload a file as an attachment to a Jira issue.
+
+    Requires --issue-key and --file-path. Multipart upload to
+    /rest/api/2/issue/{key}/attachments. Sets X-Atlassian-Token: no-check
+    as required by Atlassian for attachment endpoints.
+    """
+    if not args.issue_key:
+        error_exit("--issue-key required for attach-file", 2)
+    if not args.file_path:
+        error_exit("--file-path required for attach-file", 2)
+    if not os.path.isfile(args.file_path):
+        error_exit(f"File not found: {args.file_path}", 2)
+
+    filename = os.path.basename(args.file_path)
+    with open(args.file_path, "rb") as f:
+        file_bytes = f.read()
+
+    boundary = "----JiraClientBoundary7349"
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: application/octet-stream\r\n\r\n"
+    ).encode() + file_bytes + f"\r\n--{boundary}--\r\n".encode()
+
+    url = f"{config['baseUrl']}/rest/api/2/issue/{args.issue_key}/attachments"
+    credentials = f"{config['email']}:{config['apiToken']}"
+    auth_header = base64.b64encode(credentials.encode()).decode()
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Authorization": f"Basic {auth_header}",
+            "Accept": "application/json",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "X-Atlassian-Token": "no-check",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        handle_http_error(e)
+    except urllib.error.URLError as e:
+        error_exit(f"Cannot reach {config['baseUrl']}: {e.reason}", 3)
+
+    if not isinstance(data, list) or not data:
+        error_exit("Unexpected attachment response (expected non-empty list)", 4)
+    att = data[0]
+    return {
+        "ok": True,
+        "key": args.issue_key,
+        "attachmentId": att.get("id", ""),
+        "filename": att.get("filename", filename),
+        "size": att.get("size", len(file_bytes)),
+    }
+
+
+def action_delete_issue(config, args):
+    """Delete a Jira issue. Cascades to subtasks by default.
+
+    Use --no-cascade to refuse deletion if subtasks exist.
+    """
+    if not args.issue_key:
+        error_exit("--issue-key required for delete-issue", 2)
+    cascade = "false" if args.no_cascade else "true"
+    make_request(
+        config, "DELETE",
+        f"/rest/api/2/issue/{args.issue_key}?deleteSubtasks={cascade}",
+    )
+    return {"ok": True, "key": args.issue_key, "deleted": True, "cascade": cascade == "true"}
+
+
+def action_get_current_user(config, _args):
+    """Return the current user's identity, including accountId.
+
+    Same endpoint as verify-auth but a clearer name for the common
+    use case of "give me my accountId so I can self-assign".
+    """
+    return action_verify_auth(config, _args)
+
+
 # --- Utilities ---
 
 def read_payload(path):
@@ -428,8 +568,12 @@ ACTIONS = {
     "search-issues": action_search_issues,
     "get-issue-types": action_get_issue_types,
     "create-issue": action_create_issue,
+    "update-issue": action_update_issue,
+    "delete-issue": action_delete_issue,
+    "attach-file": action_attach_file,
     "get-issue": action_get_issue,
     "add-comment": action_add_comment,
+    "get-current-user": action_get_current_user,  # clearer-named alias for verify-auth
     "get-accessible-resources": action_verify_auth,  # alias — same endpoint
 }
 
@@ -442,6 +586,9 @@ def main():
     parser.add_argument("--project", help="Jira project key")
     parser.add_argument("--query", help="Search query string")
     parser.add_argument("--payload-file", dest="payload_file", help="Path to JSON payload file")
+    parser.add_argument("--file-path", dest="file_path", help="Path to local file (for attach-file)")
+    parser.add_argument("--no-cascade", dest="no_cascade", action="store_true",
+                        help="For delete-issue: refuse to delete if subtasks exist")
     args = parser.parse_args()
 
     config = read_config(args.config)
