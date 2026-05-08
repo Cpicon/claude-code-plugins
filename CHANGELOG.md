@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-07
+
+### Fixed
+- `jira_client.py`: `search-issues` action migrated from the removed `/rest/api/2/search` endpoint to `POST /rest/api/3/search/jql`. Atlassian returned `HTTP 410: The requested API has been removed` on the old route, which broke duplicate detection during `/generate-jira-task` in REST mode. See [Atlassian CHANGE-2046](https://developer.atlassian.com/changelog/#CHANGE-2046).
+
+### Changed
+- `jira_client.py`: `search-issues` response now reports `total` from a separate non-fatal call to `POST /rest/api/3/search/approximate-count` (the new endpoint no longer returns `total`). If the secondary call fails, `total` falls back to `len(issues)` so the search still returns useful data. The response also exposes `nextPageToken` when more results are available, since the new endpoint uses token-based pagination instead of `startAt`.
+- `jira-rest-api` skill: documentation updated to reflect the new endpoint, approximate `total` semantics, and `nextPageToken` pagination model. Skill version bumped to `1.1.0`.
+
+### Internal
+- `jira_client.py`: extracted `_build_authed_request` helper shared by `make_request` and the new non-fatal `try_request` (used for the optional approximate-count call). No behavior change to existing actions.
+
 ## [1.1.1] - 2026-04-20
 
 ### Fixed
@@ -74,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-phase command execution with agent orchestration
 - Graceful fallback modes when external services unavailable
 
-[Unreleased]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Cpicon/claude-code-plugins/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Cpicon/claude-code-plugins/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Cpicon/claude-code-plugins/releases/tag/v1.0.0
