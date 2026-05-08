@@ -152,6 +152,17 @@ python3 {SCRIPT_PATH} \
 - `--no-cascade` makes Jira refuse to delete an issue that has subtasks.
 - This is irreversible — commands should confirm with the user first.
 
+### Notes on `search-issues`
+
+- Endpoint: `POST /rest/api/3/search/jql` (the v2/v3 `/search` routes were removed by Atlassian).
+- `total` is an **approximate** count fetched from `/rest/api/3/search/approximate-count`
+  in a separate non-fatal call. If that secondary call fails, `total` falls back to
+  `len(issues)` so the search still returns useful data.
+- Pagination is **token-based**, not offset-based. When more results exist beyond
+  `maxResults`, the response includes `nextPageToken`; pass it back in the next
+  payload's `nextPageToken` field to fetch the next page. There is no `startAt`.
+- Default `maxResults` is `5`; payload may override (Jira caps at 100).
+
 ## Exit Codes
 
 | Code | Meaning | Command Recovery |
